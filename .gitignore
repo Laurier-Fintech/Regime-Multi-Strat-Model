@@ -1,6 +1,6 @@
 # Secrets: never commit (the repo is public)
-.env
+#.env
 
 # DuckDB database files (large, rebuildable, may hold account data)
-*.duckdb
-*.duckdb.wal
+#*.duckdb
+#*.duckdb.wal
