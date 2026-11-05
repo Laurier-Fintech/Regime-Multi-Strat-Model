@@ -1,0 +1,34 @@
+# =============================================================================
+# Base config: only the facts already fixed by the white paper (Draft v1).
+# Tunable numbers (thresholds, limits, dates, tickers) go in other files later.
+# =============================================================================
+
+project:
+  name: Regime-Multi-Strat-Model
+  team: LTG Quant Team 1
+  target: Fully backtested, tradable system by April 2027
+
+broker: IBKR
+trading_account: paper          # paper | live. Stay on paper until told otherwise.
+decision_frequency: daily       # daily-to-weekly decisions; the engine steps daily
+
+database:
+  engine: duckdb
+  market_data: Data/DataBase/market_data.duckdb   # raw + processed market data
+  trading: Data/DataBase/trading.duckdb           # positions, orders, fills, NAV
+
+data_sources:
+  - yfinance
+  - fred          # use ALFRED (as-first-published values) for the backtest
+  - bloomberg     # manual exports only
+  - ibkr          # live data; no history for expired options
+
+regime_model: hmm               # hidden Markov model, outputs probabilities
+
+sleeves:
+  vol:      { name: "A - Volatility",        bets_on: size_of_moves }
+  equity:   { name: "B - Equity options",    bets_on: direction }
+  spread:   { name: "C - Cross-asset spread", bets_on: relationships, active_in_stress: false }
+
+reserve:                        # not a strategy; a safe place for capital
+  holdings: [t_bills, gold, cash, tail_hedge_otm_index_puts]
