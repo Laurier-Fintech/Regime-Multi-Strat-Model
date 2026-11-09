@@ -1,0 +1,1 @@
+"""Strategy sleeves and their shared interface."""
