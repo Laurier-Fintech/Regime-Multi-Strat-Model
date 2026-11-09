@@ -1,6 +1,10 @@
-# Secrets: never commit (the repo is public)
-#.env
+.env
 
-# DuckDB database files (large, rebuildable, may hold account data)
-#*.duckdb
-#*.duckdb.wal
+*.duckdb
+*.duckdb.wal
+
+Data/DataSources/bloomberg_exports/
+
+.venv/
+__pycache__/
+*.pyc
