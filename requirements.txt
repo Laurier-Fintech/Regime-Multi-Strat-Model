@@ -6,3 +6,7 @@ requests==2.34.2
 python-dotenv==1.2.4
 pyyaml==6.0.3
 truststore==0.10.5
+
+# Notebooks (tests/test_database.ipynb)
+matplotlib==3.11.2
+ipykernel==7.4.0

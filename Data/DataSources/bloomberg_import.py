@@ -13,12 +13,19 @@ Bloomberg's licence forbids redistribution and the repo is public.
                   or ... , iv_pct                                       (iv as percent, 20.0)
             moneyness_type is 'pct_spot' (100 = ATM) or 'delta' (25, 50 ...)
 
+    Bloomberg's own wide layout also works, in either folder:
+        <underlying>.csv  e.g. spx.csv
+            columns: date, 30DAY_IMPVOL_90.0%MNY_DF, ..., 6MTH_IMPVOL_110.0%MNY_DF  (iv in percent)
+        Any file whose columns are <n>DAY / <n>MTH _IMPVOL_ <m>%MNY_DF is read
+        as an implied-vol grid. Tenors: nDAY -> n days, nMTH -> n*30 days.
+        Blank cells are skipped (e.g. no 6-month TQQQ options before 2013).
+
 Re-importing the same file is safe: unchanged rows are skipped.
-The exact export layout will be confirmed once we see a real Prism export.
 """
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -27,6 +34,7 @@ import pandas as pd
 from Data.DataBase.db import log_refresh, write_option_iv, write_series
 
 EXPORT_DIR = Path(__file__).resolve().parent / "bloomberg_exports"
+IV_COL = re.compile(r"^(\d+)(DAY|MTH)_IMPVOL_([\d.]+)%MNY_DF$", re.IGNORECASE)
 
 
 def has_files() -> bool:
@@ -42,7 +50,32 @@ def _read_series(path: Path) -> pd.DataFrame:
     return df.dropna()
 
 
+def _is_wide_iv(path: Path) -> bool:
+    cols = pd.read_csv(path, nrows=0).columns[1:]
+    return len(cols) > 0 and all(IV_COL.match(c.strip()) for c in cols)
+
+
+def _read_wide_iv(path: Path, underlying: str) -> pd.DataFrame:
+    """Bloomberg BDH layout: one date column, one column per tenor x moneyness field (iv in percent)."""
+    raw = pd.read_csv(path)
+    date_col = raw.columns[0]
+    long = raw.melt(id_vars=date_col, var_name="field", value_name="iv_pct")
+    parts = long["field"].str.strip().str.extract(IV_COL)
+    n, unit, mny = parts[0].astype(int), parts[1].str.upper(), parts[2].astype(float)
+    return pd.DataFrame({
+        "underlying": underlying,
+        "obs_date": pd.to_datetime(long[date_col]),
+        "tenor_days": n.where(unit == "DAY", n * 30),
+        "moneyness_type": "pct_spot",
+        "moneyness": mny,
+        "iv": pd.to_numeric(long["iv_pct"], errors="coerce") / 100.0,
+        "source": "bloomberg",
+    }).dropna(subset=["iv"])
+
+
 def _read_option_iv(path: Path, underlying: str) -> pd.DataFrame:
+    if _is_wide_iv(path):
+        return _read_wide_iv(path, underlying)
     raw = pd.read_csv(path)
     raw.columns = [c.strip().lower() for c in raw.columns]
     if "iv" not in raw and "iv_pct" in raw:
@@ -74,7 +107,7 @@ def refresh(con, refresh_id: str, fetched_at: datetime):
         except Exception as e:
             n, status, msg = 0, "error", f"{type(e).__name__}: {e}"
         log_refresh(con, refresh_id, "bloomberg", series_id, started, n, status, msg)
-        print(f"  bloomberg {series_id:<15} {status:<6} {n:>7} rows" + (f"  {msg}" if msg else ""))
+        print(f"  bloomberg {series_id:<22} {status:<6} {n:>7} rows" + (f"  {msg}" if msg else ""))
         results.append((series_id, n, status, msg))
 
     def _series_file(path: Path) -> int:
@@ -88,7 +121,10 @@ def refresh(con, refresh_id: str, fetched_at: datetime):
         return write_option_iv(con, _read_option_iv(path, path.stem), fetched_at, lag_days=0)
 
     for path in sorted((EXPORT_DIR / "series").glob("*.csv")):
-        _do(path.stem, lambda p=path: _series_file(p))
+        if _is_wide_iv(path):  # an IV grid saved in series/: import it as option_iv
+            _do(f"iv:{path.stem}", lambda p=path: _iv_file(p))
+        else:
+            _do(path.stem, lambda p=path: _series_file(p))
     for path in sorted((EXPORT_DIR / "option_iv").glob("*.csv")):
         _do(f"iv:{path.stem}", lambda p=path: _iv_file(p))
 

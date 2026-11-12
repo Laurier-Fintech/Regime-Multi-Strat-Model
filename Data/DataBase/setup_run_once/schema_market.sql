@@ -283,7 +283,8 @@ VALUES
     ('usdcad',         'series', 'fred', 'DEXCAUS',      'Canadian dollars per US dollar (noon NY rate)',     'CAD per USD', 1, 'sleeve_c',      NULL),
 
     -- Bloomberg: manual CSV exports. Index closes computed after the US close -> lag 1 to be safe
-    ('hy_oas',         'series', 'bloomberg', 'H0A0 Index', 'ICE BofA US High Yield OAS, full history (Bloomberg)', 'basis points', 1, 'regime', 'Main credit measure. Confirm ticker/field on the terminal before exporting'),
+    ('hy_oas',         'series', 'bloomberg', 'LF98OAS Index', 'Bloomberg US Corporate High Yield OAS, full history', 'percent', 1, 'regime', 'Main credit measure. Monthly 1994-1997, daily after. Different index family from hy_oas_fred (ICE), similar level'),
+    ('spx_div_yield',  'series', 'bloomberg', 'SPX Index',     'S&P 500 dividend yield (Bloomberg)', 'percent', 1, 'sleeve_a,sleeve_b', 'Black-Scholes input for model-priced SPX options'),
 
     -- CBOE: index closes, known the same day -> lag 0
     ('vix',            'series', 'cboe', 'VIX',   'CBOE Volatility Index (30-day S&P 500)',  'index points', 0, 'regime,sleeve_a', NULL),

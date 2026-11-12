@@ -93,10 +93,10 @@ def curve_slope(x: Inputs) -> Result:
 
 
 def _credit(x: Inputs) -> Result:
-    """Bloomberg hy_oas (basis points) where we have it, else the FRED copy (percent). Output in percent."""
+    """Bloomberg hy_oas where we have it, else the FRED copy. Both in percent."""
     bb_v, bb_k = x.series("hy_oas")
     fr_v, fr_k = x.series("hy_oas_fred")
-    v = (bb_v["hy_oas"] / 100.0).combine_first(fr_v["hy_oas_fred"])
+    v = bb_v["hy_oas"].combine_first(fr_v["hy_oas_fred"])
     k = bb_k["hy_oas"].where(bb_v["hy_oas"].notna()).combine_first(fr_k["hy_oas_fred"])
     ok = v.notna()
     return v[ok], k[ok]
