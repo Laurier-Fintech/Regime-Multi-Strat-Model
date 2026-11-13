@@ -20,7 +20,7 @@ Think of it as the circuit breaker in your house. The appliances (sleeves) do th
 |---|---|---|
 | `exposure.py` | Adds up delta and vega across all sleeves, using current holdings from [Portfolio](../Portfolio/) plus the new wanted positions. | Medium |
 | `limits.py` | Checks the totals against limits from [Config](../Config/) and **scales down** the wanted positions that would break them. | Medium |
-| `circuit_breaker.py` | Watches the VIX and, on a sharp jump, tells the short-vol sleeves to cut immediately. It also decides when to rebuild gradually afterwards. | Medium |
+| `circuit_breaker.py` | Watches the VIX and, on a sharp jump, moves weight out of the short-vol sleeves into the reserve immediately. It also decides when to rebuild gradually afterwards. It acts on the allocator's weights (the engine calls it right after the allocator), so it works with the sleeves on or off. | Medium |
 | `risk_manager.py` | Runs all checks in order, returns the approved positions, and logs every cut and the reason. | Low–Medium |
 
 ## What it talks to

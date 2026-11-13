@@ -7,6 +7,10 @@ The backtester **doesn't** sit at the end of a pipeline. It **drives** the same 
 
 Think of it as a flight simulator. It's the same cockpit and the same controls as the real plane, but the world outside is a recording of the past.
 
+**The split:** [ModelHome](../ModelHome/) decides *what we want to hold*. This folder answers *what the market would have done to our orders*. Nothing here is used live. To go live, unplug `sim_broker.py` and plug in `live_broker.py` from [Execution](../Execution/); the engine doesn't change.
+
+The backtester works with the sleeves **off** (regime + allocator on plain ETFs, the first test) or **on** (the full options system). The switch lives in [Config](../Config/).
+
 ## Files that will live here (planned)
 | File | What it does | Complexity |
 |---|---|---|
@@ -14,8 +18,9 @@ Think of it as a flight simulator. It's the same cockpit and the same controls a
 | `margin.py` | Checks we'd actually have had enough margin (collateral) to hold short options. It forces cuts if not, as a real broker would. | Medium |
 | `assignment.py` | Simulates options expiring and short options being **assigned**, including early assignment, so the [EquitySleeve](../Sleeves/EquitySleeve/) wheel behaves realistically. | Medium–High |
 | `option_history.py` | Rebuilds historical option prices where real ones aren't available, by **re-pricing options from a model** (using [Common](../Common/)) on historical implied volatility. Every such result must say clearly that it's model-priced. | High |
-| `run_backtest.py` | Sets the start and end dates and settings from [Config](../Config/), runs the engine over history, and saves results to the database. | Low–Medium |
-| `walk_forward.py` | Splits history into "fit" and "test" periods that roll forward, so models are always judged on data they weren't fitted on. | Medium |
+| `run_backtest.py` | Sets the start and end dates, sleeves on/off and other settings from [Config](../Config/), plugs `sim_broker.py` into the engine, runs it over history, and saves results to the database. | Low–Medium |
+
+There's no separate walk-forward file. Refitting on past data only happens inside the regime itself (`ModelHome/RegimeHMM/regime_model.py`), so every backtest is walk-forward automatically.
 
 ## What it talks to
 - **Gets from:** [ModelHome](../ModelHome/) (it runs the engine), [Portfolio](../Portfolio/) (orders to fill), [Data/DataBase](../Data/DataBase/) (historical prices, as-of only), [Common](../Common/) (option pricing, calendar), and [Config](../Config/) (run settings, cost assumptions).

@@ -9,10 +9,10 @@ Think of it as the control panel. The machine stays the same, and you turn the d
 | File | What it does | Complexity |
 |---|---|---|
 | `universe.yaml` | Which instruments each sleeve may trade, and which data series feed the regime model. | Low |
-| `model.yaml` | Regime engine settings: number of moods, how often to re-fit, how much to smooth allocations, and the weight caps and shrinkage guardrails. | Low |
+| `model.yaml` | Regime engine settings: which features feed the stress model and the direction model, how often to refit, how much history to wait for before the first fit, the capital mix for each of the four moods, how much to smooth allocations, and the weight caps and shrinkage guardrails. | Low |
 | `sleeves.yaml` | Per-sleeve settings: entry and exit thresholds, option expiries and strikes to target, wheel exit rules. | Low |
 | `risk.yaml` | Risk limits: maximum net vega and delta, the VIX circuit-breaker trigger, and tail-hedge size. | Low |
-| `backtest.yaml` | Start and end dates, cost assumptions (commissions, slippage), and fit and test periods. | Low |
+| `backtest.yaml` | Start and end dates, cost assumptions (commissions, slippage), **sleeves on/off**, and the stand-in ETF for each sleeve when sleeves are off. | Low |
 | `.env.example` | A **template** listing the secret keys needed (FRED API key, IBKR account and port), with blank values. | Low |
 | `.env` | **Your real keys. Never committed to Git**: the repo is public. Each person keeps their own copy. | — |
 
