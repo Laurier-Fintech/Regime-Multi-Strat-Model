@@ -2,8 +2,8 @@
 Loads CSVs exported by hand from the Bloomberg terminal (Prism lab).
 
 Bloomberg can't be queried from code here. Export to CSV, save into the
-git-ignored folder below, then run refresh.py. NEVER commit these files:
-Bloomberg's licence forbids redistribution and the repo is public.
+folder below, then run refresh.py. The exports are committed to the repo
+(team decision, 2026-11-15) so a teammate's refresh.py builds the full database.
 
     Data/DataSources/bloomberg_exports/
         series/<series_id>.csv        e.g. series/hy_oas.csv

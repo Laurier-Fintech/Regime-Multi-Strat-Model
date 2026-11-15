@@ -86,7 +86,7 @@ The database itself is simple. Designing tables so look-ahead is impossible by c
 ## Watch-outs
 1. **Nobody queries the tables directly.** Always go through `access.py`, so the as-of rule can't be skipped by accident.
 2. **Keep raw data untouched.** If cleaning has a bug, you want to be able to re-run it on the original data.
-3. **Never commit `.duckdb` files or Bloomberg exports.** The repo is public. Check that `*.duckdb` is active (not commented out) in `.gitignore`.
+3. **Never commit `.duckdb` files.** The repo is public. (Bloomberg exports are committed on purpose; see Data/DataSources.) Check that `*.duckdb` is active (not commented out) in `.gitignore`.
 4. **Test the as-of rule.** Run the same read with `as_of` set to an earlier date and confirm that nothing after that date appears and nothing before it changes.
 
 ## Read first

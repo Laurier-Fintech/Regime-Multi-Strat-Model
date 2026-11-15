@@ -3,8 +3,6 @@
 *.duckdb
 *.duckdb.wal
 
-Data/DataSources/bloomberg_exports/
-
 .venv/
 __pycache__/
 *.pyc
