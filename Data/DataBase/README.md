@@ -19,7 +19,7 @@ Think of it as the pantry shelves, plus a librarian who checks the date on every
 ## Tables
 Every market-data table uses the same two dates: `obs_date` (the day the value is about) and `known_at` (the first day we could have known it: `obs_date` plus the series' `publish_lag_days` in business days). The full definitions are in [setup_run_once/schema_market.sql](setup_run_once/schema_market.sql) and [setup_run_once/schema_trading.sql](setup_run_once/schema_trading.sql).
 
-ER diagrams: [diagrams/er_market_data.png](diagrams/er_market_data.png) and [diagrams/er_trading.png](diagrams/er_trading.png). Tables are stacked in one column, and each line runs from the exact column that points to the exact column it points to.
+ER diagrams: [Docs/diagrams/er_market_data.png](../../Docs/diagrams/er_market_data.png) and [Docs/diagrams/er_trading.png](../../Docs/diagrams/er_trading.png). Tables are stacked in one column, and each line runs from the exact column that points to the exact column it points to.
 
 **`market_data.duckdb`**
 | Table | What's in it |

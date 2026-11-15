@@ -1,3 +1,21 @@
+import numpy as np
+
+
+def _swap(params, order):
+    """Helper: applies the new order to pi, A, means and covs so nothing gets mixed up
+
+    Keyword arguments:
+    params -- dict from fit()
+    order -- list of state indexes in the new order e.g. [1, 0]
+    Return: new params dict
+    """
+    return {
+        "pi": params["pi"][order],
+        "A": params["A"][order][:, order],      # rows AND columns, both are states
+        "means": params["means"][order],
+        "covs": params["covs"][order],
+        "loglik": params["loglik"],             # the fit score doesn't change when we rename
+    }
 
 def name_states(params, feature_names, kind):
     """After every refit the states come out in a random order (state 0 could be calm or stressed).
@@ -12,29 +30,15 @@ def name_states(params, feature_names, kind):
     kind -- 'stress' or 'direction'
     Return: the same params dict but reordered, plus the labels in order e.g. ['calm', 'stressed']
     """
-    pass
+    if kind == "stress":
+        col = feature_names.index("log_vix")
+        labels = ["calm", "stressed"]
+        order = np.argsort(params['means'][:, col])
+    elif kind == "direction":
+        col = feature_names.index("trend_spy")
+        labels= ["bull", "bear"]
+        order = np.argsort(params["means"][:, col])[::-1]
+    else:
+        raise ValueError(f"kind must be 'stress' or 'direction', got {kind}")
 
-    # Find the column we sort by
-    #   stress    --> log_vix
-    #   direction --> trend_spy
-
-    # Look at means[:, that column] --> which state is higher?
-
-    # Build the new order e.g. [1, 0] if we need to swap
-
-    # Reorder everything with it:
-    #   pi    --> pi[order]
-    #   A     --> rows AND columns: A[order][:, order]
-    #   means --> means[order]
-    #   covs  --> covs[order]
-
-
-def _swap(params, order):
-    """Helper: applies the new order to pi, A, means and covs so nothing gets mixed up
-
-    Keyword arguments:
-    params -- dict from fit()
-    order -- list of state indexes in the new order e.g. [1, 0]
-    Return: new params dict
-    """
-    pass
+    return _swap(params, order), labels

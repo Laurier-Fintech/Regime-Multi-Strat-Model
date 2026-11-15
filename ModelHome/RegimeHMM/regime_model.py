@@ -1,5 +1,6 @@
-from Data.DataBase.access import get_features, get_prices
+import pandas as pd
 
+from Data.DataBase.access import get_features, get_prices
 from ModelHome.RegimeHMM import regime_hmm, state_labels
 
 # The two models. Same maths (regime_hmm.py) used twice, just fed different features
@@ -9,8 +10,9 @@ STRESS_FEATURES = ["log_vix", "credit_spread", "credit_spread_chg_20d"]
 #          Left out of v1 because it only starts 2009-09-18 and would cut 2008 out of the stress model.
 DIRECTION_FEATURES = ["trend_spy", "curve_slope"]
 
-REFIT_EVERY = "month"     # refit on the first trading day of each month
-MIN_HISTORY_DAYS = 1260   # ~5 years of data before the first fit
+FIRST_DATE = "1990-01-01"   # pull history from here (each feature starts when it starts)
+REFIT_EVERY_MONTHS = 3      # refit every quarter (monthly = 1, slower backtests)
+MIN_HISTORY_DAYS = 1260     # ~5 years of data before the first fit
 
 
 class RegimeModel:
@@ -19,18 +21,24 @@ class RegimeModel:
     """
 
     def __init__(self):
-        """Sets up an empty slot for each model
+        """Sets up an empty slot for each model"""
+        self.models = {
+            "stress": self._empty_slot(STRESS_FEATURES),
+            "direction": self._empty_slot(DIRECTION_FEATURES),
+        }
 
-        Each model (stress and direction) keeps:
-            features   -- which feature_ids it reads
-            params     -- from regime_hmm.fit() (None until the first fit)
-            scale_mean -- mean of each feature in the training window (to scale new days the same way)
-            scale_std  -- std of each feature in the training window
-            prob       -- yesterday's probabilities e.g. [0.9, 0.1]
-            last_row   -- the date of the last feature row we stepped on (so we never step twice on the same row)
-            last_fit   -- the date of the last refit
-        """
-        pass
+    def _empty_slot(self, features):
+        """Everything one model needs to remember between days"""
+        return {
+            "features": features,   # which feature_ids it reads
+            "params": None,         # from regime_hmm.fit(), None until the first fit
+            "labels": None,         # e.g. ['calm', 'stressed']
+            "scale_mean": None,     # mean of each feature in the training window
+            "scale_std": None,      # std of each feature in the training window
+            "prob": None,           # yesterday's probabilities e.g. [0.9, 0.1]
+            "last_row": None,       # date of the last feature row we used
+            "last_fit": None,       # date of the last refit
+        }
 
     def update(self, as_of):
         """Gives the 4 mood probabilities for one day, using only data known on that day
@@ -38,53 +46,68 @@ class RegimeModel:
         Keyword arguments:
         as_of -- the date the engine is asking about
         Return: calm-bull: XX, calm-bear: XX, stressed-bull: XX, stressed-bear: XX (sums to 1)
+                or None while there isn't enough history yet
         """
-        pass
+        as_of = pd.Timestamp(as_of)
 
-        # For each model (stress, direction):
+        for kind, slot in self.models.items():
+            # Is it a refit day?
+            #   Yes --> _refit
+            #   No  --> _step
+            if self._is_refit_day(slot, as_of):
+                self._refit(kind, slot, as_of)
+            else:
+                self._step(slot, as_of)
 
-        #   Is it a refit day? (first time, or a new month started)
-        #       Yes --> self._refit(model, as_of)
-        #       No  --> self._step(model, as_of)
+        return self._combine()
 
-        # Combine --> self._combine()
+    def _is_refit_day(self, slot, as_of):
+        """True the first time, then once every REFIT_EVERY_MONTHS months"""
+        if slot["last_fit"] is None:
+            return True
+        months = (as_of.year - slot["last_fit"].year) * 12 + (as_of.month - slot["last_fit"].month)
+        return months >= REFIT_EVERY_MONTHS
 
-    def _refit(self, model, as_of):
-        """Re-learns one model on all data known up to as_of
+    def _refit(self, kind, slot, as_of):
+        """Re-learns one model on all data known up to as_of"""
 
-        Pulls: get_features(model features, start=first date, end=as_of, as_of=as_of)
-               --> table, dates down the side, one column per feature
-        """
-        pass
+        # Pull everything known on as_of --> table, dates down the side, one column per feature
+        data = get_features(slot["features"], FIRST_DATE, as_of, as_of=as_of).dropna()
 
-        # Drop rows with any blanks
+        # Not enough history yet --> no probabilities, try again tomorrow
+        if len(data) < MIN_HISTORY_DAYS:
+            return
 
-        # Not enough history yet (< MIN_HISTORY_DAYS)? --> skip, no probabilities yet
+        # Scale with this window only --> X = (data - mean) / std
+        slot["scale_mean"] = data.mean()
+        slot["scale_std"] = data.std()
+        X = ((data - slot["scale_mean"]) / slot["scale_std"]).to_numpy()
 
-        # scale_mean, scale_std from THIS window only --> X = (data - mean) / std
+        # Fit (warm start from last quarter's answer if we have one), then put the states in a fixed order
+        params = regime_hmm.fit(X, warm_start=slot["params"])
+        params, labels = state_labels.name_states(params, slot["features"], kind)
 
-        # regime_hmm.fit(X) --> params
-        # state_labels.name_states(params, features, kind) --> params in a fixed order
+        # Today's prob = last row of the filtered probabilities (look-back only)
+        slot["params"] = params
+        slot["labels"] = labels
+        slot["prob"] = regime_hmm.filter_all(X, params)[-1]
+        slot["last_row"] = data.index[-1]
+        slot["last_fit"] = as_of
 
-        # regime_hmm.filter_all(X, params) --> keep only the last row as today's prob
-        # last_row = last date in the window, last_fit = as_of
+    def _step(self, slot, as_of):
+        """Moves one model forward over any rows that became known since last time"""
+        if slot["params"] is None:
+            return
 
-    def _step(self, model, as_of):
-        """Moves one model forward by one day
+        # Only the rows after the last one we used
+        start = slot["last_row"] + pd.Timedelta(days=1)
+        new_rows = get_features(slot["features"], start, as_of, as_of=as_of).dropna()
 
-        Pulls: get_features(model features, start=as_of - 10 days, end=as_of, as_of=as_of)
-               --> just the last few rows, we only need the newest one
-        """
-        pass
-
-        # Take the newest row with no blanks
-
-        # Same date as last_row? --> nothing new is known today (FRED lag), keep yesterday's prob
-
-        # Scale it with the stored scale_mean / scale_std (NOT today's numbers)
-
-        # regime_hmm.filter_step(prob, x_today, params) --> new prob
-        # last_row = that row's date
+        # Usually 1 new row. 0 if nothing new is known today (FRED lag). More if days were skipped
+        for date, row in new_rows.iterrows():
+            x = ((row - slot["scale_mean"]) / slot["scale_std"]).to_numpy()   # scale with the STORED numbers
+            slot["prob"] = regime_hmm.filter_step(slot["prob"], x, slot["params"])
+            slot["last_row"] = date
 
     def _combine(self):
         """Turns the two models into the 4 moods
@@ -94,18 +117,31 @@ class RegimeModel:
             stressed-bull = P(stressed) * P(bull)
             stressed-bear = P(stressed) * P(bear)
 
-        Return: the 4 numbers above (they sum to 1 on their own)
+        Return: a pandas Series of the 4 numbers (they sum to 1), or None if a model isn't ready
         """
-        pass
+        stress = self.models["stress"]
+        direction = self.models["direction"]
+        if stress["prob"] is None or direction["prob"] is None:
+            return None
+
+        moods = {}
+        for i, s_label in enumerate(stress["labels"]):
+            for j, d_label in enumerate(direction["labels"]):
+                moods[f"{s_label}-{d_label}"] = stress["prob"][i] * direction["prob"][j]
+        return pd.Series(moods)
 
     def run(self, start, end):
         """Runs update() over every trading day from start to end. For research charts, not used by the engine
 
-        Pulls: get_prices("spy", start, end, as_of=end) --> just to get the list of trading days (its dates)
         Return: a table, one row per day, one column per mood
         """
-        pass
+        # SPY's dates = the list of trading days
+        days = get_prices("spy", start, end, as_of=end).index
 
-        # for each trading day --> self.update(day)
+        rows = {}
+        for day in days:
+            moods = self.update(day)
+            if moods is not None:
+                rows[day] = moods
 
-        # Plot it --> stressed should light up in 2008, 2011, 2015, 2018, 2020, 2022
+        return pd.DataFrame(rows).T

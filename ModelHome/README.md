@@ -78,6 +78,7 @@ The HMM maths is manageable. The hard parts are avoiding look-ahead, keeping sta
 4. **Feature history.** `vix_term` starts in Sept 2009 (CBOE VIX3M history), so the stress model can't see 2008 until a longer VIX3M history is loaded.
 
 ## To do later
+- **Sprint 2: fix "stuck" states on real data.** In a 2005–2012 test run, stressed switched on in Q3 2007 (good) but stayed at 100% until 2011, and bear stayed at 100% through 2012. Likely cause: the model splits "before 2008" vs "after 2008" instead of calm vs stressed, because feature *levels* (e.g. credit spread) sat higher after 2008 even on calm days. Things to try: use changes or levels relative to the last year instead of raw levels; train on a rolling window (e.g. last 10 years) instead of all history; fit one feature at a time to find which one causes it.
 - **Add `vix_term` back to the stress model (v2).** It was left out of v1 because it only starts 2009-09-18 and would cut 2008 out of the stress model's history. Steps: export `VIX3M Index` PX_LAST history from Bloomberg, load it into the database, rebuild `vix_term`, then add it to `STRESS_FEATURES` in `RegimeHMM/regime_model.py` (there's a TODO there).
 
 ## Read first
