@@ -66,15 +66,30 @@ get_prices(series_ids, start, end=None, *, as_of, field="close", ffill_limit=Non
 #   field: open | high | low | close | volume  (as traded, use for levels and strikes)
 #          total_return                        (use for returns; includes dividends)
 #          dividend | adj_close                (adj_close: ratios only, its level uses later info)
-get_features(feature_ids, start, end=None, *, as_of, ffill_limit=None)
+get_features(feature_ids, start, end=None, *, as_of, ffill_limit=None, include_metadata=False)
 get_dividends(series_ids, start, end=None, *, as_of)                                 # long format
-get_option_iv(underlyings, start, end=None, *, as_of, tenor_days=None, moneyness_type=None, source=None)
-get_option_chain(underlying, *, as_of, obs_date=None, expiry_from=None, expiry_to=None, source=None)
+get_option_iv(underlyings, start, end=None, *, as_of, tenor_days=None, moneyness_type=None, source=None, include_metadata=False)
+get_option_chain(underlying, *, as_of, obs_date=None, expiry_from=None, expiry_to=None, source=None, include_metadata=False)
 list_series(), list_features()
 get_trading_records(table, run_id=None)       # reads trading.duckdb (for Reporting)
 close()                                       # release the read connection
 ```
 Write trading records with `db.connect_trading()` + `db.append_rows(con, "regime_probs", df)`.
+
+### Optional provenance metadata
+
+The feature, IV and chain readers accept `include_metadata=True`. The same
+as-of/latest-version filtering is used, but the selected row's `known_at`
+date is retained. Defaults are unchanged, including wide feature output.
+Feature metadata mode returns long rows (`feature_id`, `obs_date`, `value`,
+`known_at`) and rejects forward filling. IV/chain metadata mode retains their
+existing long shape plus `known_at`. This lets adapters audit availability
+without inventing it from `obs_date`.
+
+Metadata remains DATE precision. Any adapter turning dates into timestamps
+must declare a daily timezone/availability convention; these dates do not
+establish intraday release times. The volatility adapter documents its policy
+in [Sleeves/VolSleeve](../../Sleeves/VolSleeve/README.md).
 
 ## What it talks to
 - **Gets from:** [DataSources](../DataSources/) (market data), and [ModelHome](../../ModelHome/), [Portfolio](../../Portfolio/) and [Backtesting](../../Backtesting/) (trading records).

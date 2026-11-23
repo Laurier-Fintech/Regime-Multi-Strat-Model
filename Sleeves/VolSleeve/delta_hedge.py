@@ -1,4 +1,4 @@
-"""Skeleton for Sleeve A's desired delta-hedge holdings.
+"""Sleeve A's desired whole-unit delta-hedge holdings.
 
 Common supplies instrument sensitivities and contract specifications.
 Portfolio converts approved target holdings into orders.
@@ -8,6 +8,9 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
+from math import floor, fsum, isfinite
+from numbers import Real
+from Common.targeting import combine
 
 from Sleeves.base_sleeve import SleeveContext, TargetPosition
 
@@ -64,6 +67,16 @@ class DeltaSnapshot:
     # Option and hedge sensitivities must use this same convention.
     cash_delta_per_unit: float
 
+    def __post_init__(self):
+        for value in (self.instrument_id, self.risk_factor_id, self.currency):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError('Delta identifiers and currency must be nonempty.')
+        if not isinstance(self.as_of, datetime) or self.as_of.utcoffset() is None:
+            raise ValueError('Delta timestamp must be timezone aware.')
+        value = self.cash_delta_per_unit
+        if isinstance(value, bool) or not isinstance(value, Real) or not isfinite(value):
+            raise ValueError('Cash delta must be finite and numeric.')
+
 
 # Receives a canonical instrument ID and the decision's information cutoff.
 # The adapter must use only data available by that cutoff.
@@ -73,6 +86,10 @@ DeltaLookup = Callable[[str, datetime], DeltaSnapshot]
 
 class DeltaHedger:
     """Calculate desired hedge holdings for Sleeve A's proposed option book."""
+
+    @property
+    def base_currency(self):
+        return self._config.base_currency
 
     def __init__(
         self,
@@ -102,29 +119,44 @@ class DeltaHedger:
         with the option targets before returning the sleeve's complete book.
         """
 
-        # Implementation steps:
-        # 1. Validate context and the supplied option targets.
-        # 2. Obtain each option's sensitivity using self._delta_lookup.
-        # 3. Validate timestamps, currencies, risk factors, and finite values.
-        # 4. Sum target_quantity * cash_delta_per_unit for each risk factor.
-        # 5. Resolve that factor's configured hedge and obtain its sensitivity.
-        # 6. Calculate the desired hedge quantity:
-        #
-        #       hedge quantity = -option cash delta / hedge cash delta per unit
-        #
-        # 7. Reject missing, zero, or incompatible hedge sensitivities.
-        # 8. Apply the agreed whole-unit rounding and residual-delta policy.
-        # 9. Return TargetPosition records with sleeve_id="vol".
-        #
-        # Preserve option group IDs. Attribution of a shared hedge across
-        # multiple option groups remains an integration decision.
-        # Funding, collateral, and risk approval must cover the combined book.
-        #
-        # These are desired TOTAL hedge holdings, not incremental orders.
-        # Portfolio calculates changes from its actual holdings.
-        # Risk adjustments to option targets may require the hedge to be
-        # recalculated or the combined exposure to be checked again.
+        if not isinstance(context, SleeveContext):
+            raise TypeError('context must be a SleeveContext.')
+        targets = combine(option_targets, 'vol')
 
-        raise NotImplementedError(
-            "Delta aggregation and hedge sizing have not been implemented."
-        )
+        def lookup(instrument_id):
+            row = self._delta_lookup(instrument_id, context.as_of)
+            if not isinstance(row, DeltaSnapshot) or row.instrument_id != instrument_id or row.as_of != context.as_of:
+                raise ValueError('Delta lookup must match instrument and decision timestamp exactly.')
+            if row.currency != self._config.base_currency:
+                raise ValueError('Delta currency does not match base currency.')
+            return row
+
+        by_factor = {}
+        for target in targets:
+            if target.instrument_id in self._config.hedge_instruments.values():
+                raise ValueError('Option target cannot also be a hedge instrument.')
+            row = lookup(target.instrument_id)
+            by_factor.setdefault(row.risk_factor_id, []).append(target.target_quantity * row.cash_delta_per_unit)
+        result, used = [], set()
+        for factor, values in sorted(by_factor.items()):
+            delta = fsum(values)
+            if not isfinite(delta):
+                raise ValueError('Aggregate delta overflow.')
+            if factor not in self._config.hedge_instruments:
+                raise ValueError(f'Missing hedge mapping for {factor}.')
+            instrument_id = self._config.hedge_instruments[factor]
+            if instrument_id in used:
+                raise ValueError('One hedge cannot represent multiple independent risk factors.')
+            used.add(instrument_id)
+            hedge = lookup(instrument_id)
+            if hedge.risk_factor_id != factor or hedge.cash_delta_per_unit == 0:
+                raise ValueError('Hedge factor mismatch or zero sensitivity.')
+            desired = -delta / hedge.cash_delta_per_unit
+            if not isfinite(desired):
+                raise ValueError('Hedge quantity overflow.')
+            # Nearest whole unit, exact ties away from zero. Residual <= half
+            # one hedge unit; Risk must assess whether that is acceptable.
+            quantity = (1 if desired >= 0 else -1) * floor(abs(desired) + 0.5)
+            if quantity:
+                result.append(TargetPosition('vol', instrument_id, quantity, f'vol:hedge:{factor}'))
+        return result

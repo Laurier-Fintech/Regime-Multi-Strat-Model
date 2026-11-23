@@ -1,21 +1,20 @@
-"""Skeleton for selecting and sizing Sleeve A's option structures.
-
-The builder returns desired option holdings for one underlying.
-Contract selection and sizing remain to be implemented.
-"""
+"""Exact-expiry straddles/strangles with canonical contracts and gross reserves."""
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import Enum
+from datetime import date
 from typing import TYPE_CHECKING
 
 from Sleeves.base_sleeve import SleeveContext, TargetPosition
-from Sleeves.VolSleeve.signal import VolSignal
+from Sleeves.VolSleeve.signal import VolSignal, VolDirection
+from Common.targeting import (SelectionPolicy, CapitalModel, MarketLookup, chain_rows,
+    market_at, resolved, compatible, require_option_funding, sized)
 
 # This import is only needed by static type checkers.
-# Importing this skeleton does not require pandas to be loaded.
+# Importing this module does not require pandas to be loaded.
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -39,8 +38,11 @@ class StructureConfig:
     # The volatility forecast uses trading days and must be aligned separately.
     min_dte_calendar_days: int
     max_dte_calendar_days: int
+    selection: SelectionPolicy
 
     def __post_init__(self) -> None:
+        if not isinstance(self.selection, SelectionPolicy):
+            raise TypeError('selection must be a SelectionPolicy.')
         for name in ("long_vol_structure", "short_vol_structure"):
             if not isinstance(getattr(self, name), StructureType):
                 raise TypeError(f"{name} must be a StructureType.")
@@ -69,6 +71,12 @@ class OptionContractRef:
     instrument_id: str
     multiplier: float
     currency: str
+    underlying: str
+    expiry: date
+    strike: float
+    call_put: str
+    # Exact settlement/exercise/deliverable family from Common, not a ticker.
+    series_id: str
 
 
 # The lookup receives fields describing one selected option-chain contract.
@@ -84,6 +92,9 @@ class OptionStructureBuilder:
         self,
         config: StructureConfig,
         contract_lookup: OptionContractLookup,
+        *,
+        market_lookup: MarketLookup,
+        capital_model: CapitalModel,
     ) -> None:
         if not isinstance(config, StructureConfig):
             raise TypeError("config must be a StructureConfig.")
@@ -93,12 +104,18 @@ class OptionStructureBuilder:
 
         self._config = config
         self._contract_lookup = contract_lookup
+        self._market_lookup = market_lookup
+        self.capital_model = capital_model
+        if capital_model.base_currency != config.selection.base_currency:
+            raise ValueError('Selection and capital currencies must match.')
 
     def build(
         self,
         context: SleeveContext,
         signal: VolSignal,
         option_chain: pd.DataFrame,
+        *,
+        horizon_end: date,
     ) -> list[TargetPosition]:
         """Return desired option holdings for the signal's underlying.
 
@@ -107,24 +124,35 @@ class OptionStructureBuilder:
         before returning the sleeve's complete desired holdings.
         """
 
-        # Implementation steps:
-        # 1. Validate the signal, decision time, and option-chain data.
-        # 2. Define neutral-signal behavior explicitly.
-        # 3. Choose the configured long-vol or short-vol structure.
-        # 4. Select an expiry compatible with the forecast window and DTE bounds.
-        # 5. Select suitable strikes and check quote freshness and liquidity.
-        # 6. Resolve each exact instrument using self._contract_lookup.
-        # 7. Size the structure within the supplied capital budget, accounting
-        #    for multipliers, currency, collateral, and the chosen sizing policy.
-        # 8. Create TargetPosition records with sleeve_id="vol".
-        # 9. Give related legs one shared group_id and preserve their ratios.
-        #
-        # Portfolio-wide approval belongs to RiskManagement.
-        # Portfolio and Execution handle orders and fills.
-
-        # An unfinished builder must fail explicitly.
-        # An empty result could otherwise be interpreted as a flatten request.
-        raise NotImplementedError(
-            "Option contract selection and structure sizing "
-            "have not been implemented."
-        )
+        if not isinstance(signal, VolSignal) or signal.as_of != context.as_of:
+            raise ValueError('Signal must match the decision timestamp.')
+        # Neutral means unwind, including existing hedges, not hold indefinitely.
+        if signal.direction == VolDirection.NEUTRAL or context.capital_budget == 0:
+            return []
+        if type(horizon_end) is not date:
+            raise ValueError('An explicit session-aligned horizon_end is required.')
+        cfg, policy = self._config, self._config.selection
+        spot = market_at(self._market_lookup, signal.underlying, context, policy).spot
+        rows = chain_rows(option_chain, signal.underlying, context, policy,
+                          cfg.min_dte_calendar_days, cfg.max_dte_calendar_days, expiry=horizon_end)
+        family = cfg.long_vol_structure if signal.direction == VolDirection.LONG_VOL else cfg.short_vol_structure
+        pairs = []
+        for put in (r for r in rows if r['call_put'] == 'P'):
+            for call in (r for r in rows if r['call_put'] == 'C'):
+                if family == StructureType.STRADDLE and put['strike'] == call['strike']:
+                    pairs.append((abs(put['strike'] - spot), put['strike'], put, call))
+                elif family == StructureType.STRANGLE and put['strike'] < spot < call['strike']:
+                    pairs.append((spot - put['strike'] + call['strike'] - spot, put['strike'], put, call))
+        if not pairs:
+            raise LookupError('No complete quoted structure at the forecast expiry.')
+        _, _, put, call = min(pairs, key=lambda p: p[:2])
+        a, b = [resolved(self._contract_lookup, row, policy) for row in (put, call)]
+        compatible(a, b)
+        side = 1 if signal.direction == VolDirection.LONG_VOL else -1
+        if side < 0 and min(put['bid'], call['bid']) <= 0:
+            raise ValueError('Short option entries require positive bids.')
+        for contract, row in ((a, put), (b, call)):
+            require_option_funding(self.capital_model, contract, row, side, context, policy)
+        group = f'vol:{signal.underlying}:{horizon_end}:{family.value}:{a.instrument_id}:{b.instrument_id}'
+        lot = [TargetPosition('vol', c.instrument_id, side, group) for c in (a, b)]
+        return sized(context, lot, self.capital_model, policy.max_contracts)

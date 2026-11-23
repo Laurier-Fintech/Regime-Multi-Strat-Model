@@ -44,9 +44,18 @@ What's done, what's next, and who owns it. Tick a box when it's merged into `mai
 - [ ] Output allocations, then test them on base ETFs with sleeves off
 
 ### Jacob: options and sleeves
-- [ ] Shared option pricer and greeks
-- [ ] Sleeve 2: TQQQ wheel
+- [x] Shared option pricer and greeks: Black-Scholes-Merton, Black-76 and CRR, with shared unit conventions and tests
+- [x] Shared four-state sleeve context, quote validation and explicit gross funding checks
+- [x] Equity wheel state, coverage, put/call selection, bearish spreads and complete desired targets
+- [x] Volatility data/signal pipeline, structure selection, sizing, delta hedging and complete desired targets
+- [ ] Sleeve 2: TQQQ wheel production integration and historical validation (Portfolio, execution, assignment and real contract adapters remain)
+- [ ] Volatility production integration and historical validation (real chains, point-in-time training and funding/delta adapters remain)
 - [ ] Reserve sleeve
+
+Sleeve implementation details, breaking interface changes and verification are
+recorded in [the 2026-11-23 release notes](SLEEVE_RELEASE_2026-11-23.md).
+The implementation release has 187 passing tests; it does not complete the
+remaining production connections or demonstrate strategy performance.
 
 ### Armaan: backtest and wiring
 - [ ] Backtest engine: positions, P&L, costs

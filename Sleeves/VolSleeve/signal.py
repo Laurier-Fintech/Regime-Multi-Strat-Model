@@ -1,7 +1,7 @@
-"""Inputs, outputs, and interface for Sleeve A's volatility signals.
+"""Validated volatility comparisons and an explicit stress veto for short vol.
 
 All volatility values use annualized decimals.
-The comparison and regime-adjustment logic will be implemented next.
+Missing or misaligned inputs raise rather than producing a neutral decision.
 """
 
 # Baseline comparison:
@@ -18,12 +18,14 @@ The comparison and regime-adjustment logic will be implemented next.
 # Regime probabilities may modify this baseline interpretation.
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from enum import Enum
-from math import isfinite
+from math import isclose, isfinite
 
 from Sleeves.base_sleeve import SleeveContext
-from Sleeves.VolSleeve.rv_forecast import RVForecast
+from Sleeves.VolSleeve.rv_forecast import (
+    RVForecast, _validate_horizon, _validate_identity, _validate_volatility,
+)
 
 
 # An Enum defines a fixed set of named choices.
@@ -56,6 +58,30 @@ class ImpliedVolSnapshot:
 
     # Example: 0.25 means 25% annualized implied volatility.
     annualized_vol: float
+    source_underlying: str | None = None
+    source: str | None = None
+    horizon_end: date | None = None
+    tenor_days_used: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        _validate_identity(self.underlying, self.observed_at)
+        _validate_identity(self.underlying, self.known_at)
+        _validate_horizon(self.horizon_trading_days)
+        _validate_volatility("annualized_vol", self.annualized_vol)
+        if self.known_at < self.observed_at:
+            raise ValueError("IV cannot be known before its observation.")
+        for value in (self.source_underlying, self.source):
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError("IV source identifiers must be nonempty strings.")
+        if self.horizon_end is not None:
+            if not isinstance(self.horizon_end, date) or isinstance(self.horizon_end, datetime):
+                raise TypeError("horizon_end must be a date.")
+            if self.horizon_end <= self.observed_at.date():
+                raise ValueError("horizon_end must follow the observation date.")
+        if not isinstance(self.tenor_days_used, tuple):
+            raise TypeError("tenor_days_used must be a tuple.")
+        for tenor in self.tenor_days_used:
+            _validate_horizon(tenor)
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +92,8 @@ class VolSignalConfig:
     # Example units: 0.02 means two volatility percentage points.
     # The actual value must come from configuration.
     min_edge: float
+    stress_block_short_probability: float
+    max_iv_age: timedelta
 
     def __post_init__(self) -> None:
         if isinstance(self.min_edge, bool) or not isinstance(
@@ -75,6 +103,13 @@ class VolSignalConfig:
 
         if not isfinite(self.min_edge) or self.min_edge <= 0:
             raise ValueError("min_edge must be finite and positive.")
+        probability = self.stress_block_short_probability
+        if isinstance(probability, bool) or not isinstance(probability, (int, float)):
+            raise TypeError("stress_block_short_probability must be a number.")
+        if not isfinite(probability) or not 0 < probability <= 1:
+            raise ValueError("stress_block_short_probability must be in (0, 1].")
+        if not isinstance(self.max_iv_age, timedelta) or self.max_iv_age < timedelta(0):
+            raise ValueError("max_iv_age must be a nonnegative timedelta.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +130,16 @@ class VolSignal:
     # Explanation of the decision, including any regime adjustment.
     reason: str
 
+    def __post_init__(self) -> None:
+        _validate_identity(self.underlying, self.as_of)
+        _validate_horizon(self.horizon_trading_days)
+        if not isinstance(self.direction, VolDirection):
+            raise TypeError("direction must be a VolDirection.")
+        if isinstance(self.edge, bool) or not isinstance(self.edge, (int, float)) or not isfinite(self.edge):
+            raise ValueError("edge must be a finite number.")
+        if not isinstance(self.reason, str) or not self.reason.strip():
+            raise ValueError("reason must explain the decision.")
+
 
 class VolSignalGenerator:
     """Combine forecast volatility, implied volatility, and regime information."""
@@ -112,25 +157,54 @@ class VolSignalGenerator:
         forecast: RVForecast,
         implied_vol: ImpliedVolSnapshot,
     ) -> VolSignal:
-        """Produce a signal using information available at context.as_of.
+        """Compare aligned volatilities; high stress vetoes a short-vol entry.
 
-        This method will validate the supplied records and their alignment.
-        It will then calculate the volatility gap, apply configured thresholds,
-        and incorporate the regime probabilities.
+        Positive edge at/above min_edge proposes short volatility unless total
+        stress meets its veto threshold. Negative edge at/below -min_edge
+        proposes long volatility. Otherwise neutral. Stress alone never forces
+        a long trade. Both stress directions count equally for this vol policy.
         """
+        if not isinstance(context, SleeveContext) or not isinstance(forecast, RVForecast):
+            raise TypeError("Supply a SleeveContext and RVForecast.")
+        if not isinstance(implied_vol, ImpliedVolSnapshot):
+            raise TypeError("implied_vol must be an ImpliedVolSnapshot.")
+        if forecast.as_of != context.as_of:
+            raise ValueError("Forecast decision timestamp must match context.as_of.")
+        if forecast.underlying != implied_vol.underlying:
+            raise ValueError("Forecast and implied volatility must match underlying.")
+        if forecast.horizon_trading_days != implied_vol.horizon_trading_days:
+            raise ValueError("Forecast and implied volatility must match future horizon.")
+        if implied_vol.known_at > context.as_of or implied_vol.observed_at > context.as_of:
+            raise ValueError("Implied volatility was not available at the decision cutoff.")
+        age = context.as_of.astimezone(timezone.utc) - implied_vol.observed_at.astimezone(timezone.utc)
+        if age > self._config.max_iv_age:
+            raise ValueError("Implied-volatility observation is stale.")
+        if implied_vol.horizon_end is not None:
+            local_day = context.as_of.astimezone(implied_vol.observed_at.tzinfo).date()
+            if implied_vol.horizon_end <= local_day:
+                raise ValueError("IV horizon must end after the decision session.")
 
-        # Implementation steps:
-        # 1. Validate input types, values, and timezone-aware timestamps.
-        # 2. Match the underlying and future horizon across both measurements.
-        # 3. Match the forecast's decision time to context.as_of.
-        # 4. Check that the IV observation was known and sufficiently fresh.
-        # 5. Calculate edge = implied_vol - forecast_vol.
-        # 6. Apply the configured threshold and the agreed regime policy.
-        # 7. Return a VolSignal with its direction, gap, and explanation.
-
-        # Unfinished logic raises an explicit error.
-        # Returning NEUTRAL here would incorrectly imply a completed decision.
-        raise NotImplementedError(
-            "Volatility comparison and regime adjustment "
-            "have not been implemented."
+        edge = implied_vol.annualized_vol - forecast.annualized_vol
+        threshold = self._config.min_edge
+        # Only arithmetic roundoff at the inclusive threshold is tolerated.
+        rich = edge >= threshold or isclose(edge, threshold, rel_tol=1e-12, abs_tol=0.0)
+        cheap = edge <= -threshold or isclose(edge, -threshold, rel_tol=1e-12, abs_tol=0.0)
+        stressed = context.market_regime.stressed
+        if rich and stressed >= self._config.stress_block_short_probability:
+            direction = VolDirection.NEUTRAL
+            policy = "Short-vol entry vetoed by total stress; no automatic long-vol override."
+        elif rich:
+            direction = VolDirection.SHORT_VOL
+            policy = "Implied volatility exceeds forecast by the configured minimum edge."
+        elif cheap:
+            direction = VolDirection.LONG_VOL
+            policy = "Implied volatility is below forecast by the configured minimum edge."
+        else:
+            direction = VolDirection.NEUTRAL
+            policy = "Volatility gap is inside the neutral band."
+        return VolSignal(
+            underlying=forecast.underlying, as_of=context.as_of,
+            horizon_trading_days=forecast.horizon_trading_days,
+            direction=direction, edge=edge,
+            reason=f"{policy} edge={edge:.6f}, min_edge={threshold:.6f}, stressed={stressed:.4f}.",
         )

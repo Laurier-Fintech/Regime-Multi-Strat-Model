@@ -6,22 +6,29 @@ Instrument specifications and multipliers belong in Common/instruments.py.
 """
 # ABC define a shared templace for the actual strat. class, abtractmethod is method that each startegy must implement
 from abc import ABC, abstractmethod
-from dataclasses import dataclass # Auto creates init and repr method (methods that recieve field values when object is created, and gives object printed rep.)
+from dataclasses import dataclass, field # Auto creates init and repr method (methods that recieve field values when object is created, and gives object printed rep.)
 from datetime import datetime # Rep. date and time, including timezone
-from math import isclose, isfinite # bruh ik what this means type shi
+from math import isfinite # bruh ik what this means type shi
 from types import MappingProxyType # Provides read-only view of a dictionary
 from typing import Mapping # idek but if chat says so then yes sir
+
+from Sleeves.regime_inputs import RegimeProbabilities
 
 # Prevent normal reassignment of fields, gives instance fixed set of declared attributes
 @dataclass(frozen=True, slots=True)
 class SleeveContext:
-    """Decision inputs supplied by ModelHome for one sleeve."""
+    """Decision inputs supplied by ModelHome for one sleeve.
+
+    regime_probabilities must contain the model's four joint states.
+    market_regime supplies validated calm/stressed and bull/bear marginals.
+    """
 
     # Latest info. cut off for the decision being made in sleeve
     as_of: datetime
     capital_budget: float
     # Regime probabilities supplied by ModelHome
     regime_probabilities: Mapping[str, float]
+    market_regime: RegimeProbabilities = field(init=False)
 
     # A Dataclass calls this function automatically after assigning its fields, use it to reject invalid inputs immediately
     def __post_init__(self) -> None:
@@ -32,24 +39,11 @@ class SleeveContext:
         if not isfinite(self.capital_budget) or self.capital_budget < 0:
             raise ValueError("capital_budget must be finite and nonnegative.")
 
-        #Copy supplied probabilities into a new dictionary
-        probabilities = dict(self.regime_probabilities)
-        if not probabilities:
-            raise ValueError("regime_probabilities must contain at least one regime.")
-
-        for regime, probability in probabilities.items():
-            if not isinstance(regime, str) or not regime.strip():
-                raise ValueError("Regime names must be nonempty strings.")
-            if not isfinite(probability) or not 0 <= probability <= 1:
-                raise ValueError(
-                    "Regime probabilities must be finite and between 0 and 1."
-                )
-
-        if not isclose(sum(probabilities.values()), 1.0, rel_tol=0.0, abs_tol=1e-8):
-            raise ValueError("Regime probabilities must sum to 1.")
-
+        # Validate once at the shared boundary so all sleeves use the same sums.
+        regime = RegimeProbabilities.from_mapping(self.regime_probabilities)
+        object.__setattr__(self, "market_regime", regime)
         object.__setattr__(
-            self, "regime_probabilities", MappingProxyType(probabilities)
+            self, "regime_probabilities", MappingProxyType(regime.as_mapping())
         )
 
 # Output record protected against ordinary field assignment

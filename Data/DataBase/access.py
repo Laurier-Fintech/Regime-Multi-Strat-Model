@@ -96,16 +96,20 @@ def _wide(df: pd.DataFrame, id_col: str, value_col: str, ids: list[str], ffill_l
     return out
 
 
-def _latest_known(select_sql: str, partition: str, order: str, params: list) -> pd.DataFrame:
+def _latest_known(select_sql: str, partition: str, order: str, params: list,
+                  *, include_known_at: bool = False) -> pd.DataFrame:
     """
     The as-of core: from rows already filtered to known_at <= as_of, keep the
     newest version per `partition`. The MATERIALIZED CTE works around a
     DuckDB 1.5 optimizer bug (window on top of the clean.prices view).
     """
+    if not isinstance(include_known_at, bool):
+        raise TypeError("include_metadata must be a bool")
+    selected = "*" if include_known_at else "* EXCLUDE (known_at)"
     return _market().execute(
         f"""
         WITH x AS MATERIALIZED ({select_sql})
-        SELECT * EXCLUDE (known_at) FROM x
+        SELECT {selected} FROM x
         QUALIFY row_number() OVER (PARTITION BY {partition} ORDER BY known_at DESC) = 1
         ORDER BY {order}
         """,
@@ -113,7 +117,8 @@ def _latest_known(select_sql: str, partition: str, order: str, params: list) -> 
     ).df()
 
 
-def _as_of_query(view: str, id_col: str, cols: str, ids: list[str], start, end, as_of) -> pd.DataFrame:
+def _as_of_query(view: str, id_col: str, cols: str, ids: list[str], start, end, as_of,
+                 *, include_known_at: bool = False) -> pd.DataFrame:
     return _latest_known(
         f"""
         SELECT {id_col}, obs_date, {cols}, known_at
@@ -123,6 +128,7 @@ def _as_of_query(view: str, id_col: str, cols: str, ids: list[str], start, end, 
           AND known_at <= ?
         """,
         f"{id_col}, obs_date", "obs_date", [ids, start, end, as_of],
+        include_known_at=include_known_at,
     )
 
 
@@ -158,12 +164,23 @@ def get_prices(series_ids, start, end=None, *, as_of, field: str = "close",
     return _wide(df, "series_id", field, ids, ffill_limit)
 
 
-def get_features(feature_ids, start, end=None, *, as_of, ffill_limit: int | None = None) -> pd.DataFrame:
-    """Model inputs built by features.py, e.g. ["curve_slope"]."""
+def get_features(feature_ids, start, end=None, *, as_of, ffill_limit: int | None = None,
+                 include_metadata: bool = False) -> pd.DataFrame:
+    """Model inputs, wide by default, preserving the existing API.
+
+    include_metadata=True returns long rows: feature_id, obs_date, value,
+    known_at. Metadata mode forbids filling, which would obscure provenance.
+    The same latest-version/as-of filter is applied in both modes.
+    """
+    if include_metadata and ffill_limit is not None:
+        raise ValueError("Metadata reads do not support forward filling")
     ids = _ids(feature_ids)
     _check_ids(ids, None, table="meta.features", key="feature_id")
     s, e, a = _window(start, end, as_of)
-    df = _as_of_query("features.series", "feature_id", "value", ids, s, e, a)
+    df = _as_of_query("features.series", "feature_id", "value", ids, s, e, a,
+                      include_known_at=include_metadata)
+    if include_metadata:
+        return df
     return _wide(df, "feature_id", "value", ids, ffill_limit)
 
 
@@ -184,10 +201,12 @@ def get_dividends(series_ids, start, end=None, *, as_of) -> pd.DataFrame:
 
 
 def get_option_iv(underlyings, start, end=None, *, as_of, tenor_days: Iterable[int] | None = None,
-                  moneyness_type: str | None = None, source: str | None = None) -> pd.DataFrame:
+                  moneyness_type: str | None = None, source: str | None = None,
+                  include_metadata: bool = False) -> pd.DataFrame:
     """
     Implied vol grid. Long format:
       obs_date, underlying, tenor_days, moneyness_type, moneyness, iv, source
+    include_metadata=True retains known_at on the selected version.
     Empty until option data is loaded.
     """
     ids = _ids(underlyings)
@@ -210,14 +229,16 @@ def get_option_iv(underlyings, start, end=None, *, as_of, tenor_days: Iterable[i
     return _latest_known(
         sql, "underlying, obs_date, tenor_days, moneyness_type, moneyness, source",
         "obs_date, underlying, tenor_days, moneyness", params,
+        include_known_at=include_metadata,
     )
 
 
 def get_option_chain(underlying: str, *, as_of, obs_date=None, expiry_from=None, expiry_to=None,
-                     source: str | None = None) -> pd.DataFrame:
+                     source: str | None = None, include_metadata: bool = False) -> pd.DataFrame:
     """
     All option contracts for one underlying on one day (obs_date defaults to as_of).
     Long format, one row per contract, with bid/ask/mid/iv/greeks.
+    include_metadata=True retains known_at on the selected version.
     Empty until option data is loaded.
     """
     a = _to_date(as_of, "as_of")
@@ -239,7 +260,8 @@ def get_option_chain(underlying: str, *, as_of, obs_date=None, expiry_from=None,
     if source is not None:
         sql += " AND source = ?"
         params.append(source)
-    return _latest_known(sql, "expiry, strike, call_put, source", "expiry, call_put, strike", params)
+    return _latest_known(sql, "expiry, strike, call_put, source", "expiry, call_put, strike", params,
+                         include_known_at=include_metadata)
 
 
 # -----------------------------------------------------------------------------

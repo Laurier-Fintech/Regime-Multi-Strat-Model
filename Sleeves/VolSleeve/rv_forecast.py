@@ -66,12 +66,27 @@ class RVInputs:
     rv_5d: float
     rv_22d: float
 
+    # Optional provenance retained by the database adapter. Existing manually
+    # prepared training examples may omit it, but must enforce their own cutoff.
+    source_underlying: str | None = None
+    observed_at: datetime | None = None
+    known_at: datetime | None = None
+
     # Dataclass calls this automatically after assigning the fields, invalid record raises an error
     def __post_init__(self) -> None:
         _validate_identity(self.underlying, self.as_of)
 
         for name in ("rv_1d", "rv_5d", "rv_22d"):
             _validate_volatility(name, getattr(self, name))
+        if self.source_underlying is not None:
+            _validate_identity(self.source_underlying, self.as_of)
+        if (self.observed_at is None) != (self.known_at is None):
+            raise ValueError("Supply observed_at and known_at together.")
+        if self.observed_at is not None:
+            _validate_identity(self.underlying, self.observed_at)
+            _validate_identity(self.underlying, self.known_at)
+            if not self.observed_at <= self.known_at <= self.as_of:
+                raise ValueError("RV provenance must satisfy observed_at <= known_at <= as_of.")
 
 
 @dataclass(frozen=True, slots=True)
