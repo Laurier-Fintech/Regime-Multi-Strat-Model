@@ -1,0 +1,37 @@
+# =============================================================================
+# Model settings: tunable numbers for ModelHome.
+# Every tunable number lives here, not in the code. Fixed facts (e.g. 252
+# trading days a year) stay in the code.
+# =============================================================================
+
+# Read by ModelHome/RegimeHMM/regime_model.py
+regime_model:
+  stress_features: [log_vix, credit_spread, credit_spread_chg_20d]
+  # TODO v2: add vix_term to stress_features once Bloomberg VIX3M history (2008) is loaded.
+  #          Left out of v1 because it only starts 2009-09-18 and would cut 2008 out of the stress model.
+  direction_features: [trend_spy, curve_slope]
+  first_date: "1990-01-01"     # pull history from here (each feature starts when it starts)
+  refit_every_months: 3        # refit every quarter (monthly = 1, slower backtests)
+  min_history_days: 1260       # ~5 years of data before the first fit
+
+# Read by ModelHome/RegimeHMM/regime_hmm.py (the HMM maths)
+regime_hmm:
+  n_states: 2                  # states per model (calm/stressed, bull/bear)
+  n_starts: 5                  # fits from different starting guesses; keep the best
+  max_rounds: 200              # max Baum-Welch rounds per start
+  tol: 0.001                   # stop when the fit improves by less than this
+  seed: 0                      # random seed for the starting guesses
+  start_stay_prob: 0.95        # starting guess: chance of staying in the same state each day
+  cov_floor: 1.0e-6            # added to covariance diagonals so they never go singular
+
+# Read by ModelHome/allocator.py (PLACEHOLDER: allocator design not decided yet)
+
+allocator:
+  # Share of capital per sleeve in each mood. Each row must add up to 1.
+  mood_mixes:
+    calm-bull:     { vol: 0.35, equity: 0.35, spread: 0.20, reserve: 0.10 }
+    calm-bear:     { vol: 0.25, equity: 0.20, spread: 0.25, reserve: 0.30 }
+    stressed-bull: { vol: 0.10, equity: 0.20, spread: 0.00, reserve: 0.70 }
+    stressed-bear: { vol: 0.05, equity: 0.10, spread: 0.00, reserve: 0.85 }
+
+  smoothing_step: 0.2          # share of the way to move toward the target each day

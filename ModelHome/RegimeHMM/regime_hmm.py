@@ -1,16 +1,25 @@
+from pathlib import Path
+
 import numpy as np
+import yaml
+
+# Settings come from Config/model.yaml (section regime_hmm), not from this file
+CONFIG_FILE = Path(__file__).resolve().parents[2] / "Config" / "model.yaml"
+with open(CONFIG_FILE, encoding="utf-8") as f:
+    SETTINGS = yaml.safe_load(f)["regime_hmm"]
 
 def _guess(X, n_states, rng):
     T, F = X.shape
     rows = rng.choice(T, size=n_states, replace=False)
     means = X[rows].copy()
-    spread = np.atleast_2d(np.cov(X.T))+ 1e-6 * np.eye(F)
+    spread = np.atleast_2d(np.cov(X.T))+ SETTINGS["cov_floor"] * np.eye(F)
     covs = np.array([spread for k in range(n_states)])
 
     pi = np.ones(n_states)/n_states
 
-    A = np.full((n_states, n_states), 0.05 / (n_states - 1))
-    np.fill_diagonal(A, 0.95)
+    stay = SETTINGS["start_stay_prob"]
+    A = np.full((n_states, n_states), (1 - stay) / (n_states - 1))
+    np.fill_diagonal(A, stay)
 
     return {"pi": pi, "A": A, "means": means, "covs": covs}
 
@@ -60,7 +69,9 @@ def _backward(B, A, scale):
 
     return beta
 
-def fit(X: np.ndarray, n_states=2, n_starts=5, max_rounds=200, tol=0.001, Input_seed=0, warm_start=None):
+def fit(X: np.ndarray, n_states=SETTINGS["n_states"], n_starts=SETTINGS["n_starts"],
+        max_rounds=SETTINGS["max_rounds"], tol=SETTINGS["tol"], Input_seed=SETTINGS["seed"],
+        warm_start=None):
     """Learns what each state looks like and how often the market switches between them
         1. Guess (or start from last fit's answer, see warm_start)
         2. Score every day (forward and backward passes)
@@ -113,7 +124,7 @@ def fit(X: np.ndarray, n_states=2, n_starts=5, max_rounds=200, tol=0.001, Input_
                 means[k] = (w[:, None] * X).sum(axis=0) / w.sum()
                 diff = X - means[k]
                 covs[k] = np.matmul((w[:, None] * diff).T, diff) / w.sum()
-                covs[k] += 1e-6 * np.eye(F) 
+                covs[k] += SETTINGS["cov_floor"] * np.eye(F)
             
         if np.isfinite(loglik) and (best is None or loglik > best['loglik']):
             best = {"pi": pi, "A": A, "means": means, "covs": covs, "loglik": loglik}

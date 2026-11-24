@@ -93,13 +93,21 @@ def curve_slope(x: Inputs) -> Result:
 
 
 def _credit(x: Inputs) -> Result:
-    """Bloomberg hy_oas where we have it, else the FRED copy. Both in percent."""
+    """Bloomberg hy_oas, then the FRED copy ONLY for dates after Bloomberg's last date.
+
+    The two are different index families (Bloomberg vs ICE), so FRED never fills
+    holes inside Bloomberg's history: mixing them there makes fake jumps in the
+    20-day change, and the filled days get replaced by the next Bloomberg export.
+    Both in percent.
+    """
     bb_v, bb_k = x.series("hy_oas")
     fr_v, fr_k = x.series("hy_oas_fred")
-    v = bb_v["hy_oas"].combine_first(fr_v["hy_oas_fred"])
-    k = bb_k["hy_oas"].where(bb_v["hy_oas"].notna()).combine_first(fr_k["hy_oas_fred"])
-    ok = v.notna()
-    return v[ok], k[ok]
+    bb = bb_v["hy_oas"].dropna()
+    bb_known = bb_k["hy_oas"].reindex(bb.index)
+    after = fr_v.index > bb.index.max()
+    fr = fr_v["hy_oas_fred"][after].dropna()
+    fr_known = fr_k["hy_oas_fred"].reindex(fr.index)
+    return pd.concat([bb, fr]), pd.concat([bb_known, fr_known])
 
 
 def credit_spread(x: Inputs) -> Result:
@@ -145,7 +153,7 @@ def realised_vol(series_id: str, days: int) -> Callable[[Inputs], Result]:
 # feature_id: (function, description, inputs, units)
 FEATURES: dict[str, tuple[Callable[[Inputs], Result], str, str, str]] = {
     "curve_slope": (curve_slope, "10y minus 2y Treasury yield", "ust_10y, ust_2y", "percentage points"),
-    "credit_spread": (credit_spread, "High-yield OAS: Bloomberg full history, FRED copy where missing",
+    "credit_spread": (credit_spread, "High-yield OAS: Bloomberg full history, FRED copy only after Bloomberg's last date",
                       "hy_oas, hy_oas_fred", "percent"),
     "credit_spread_chg_20d": (credit_spread_chg_20d, "20-day change in credit_spread",
                               "hy_oas, hy_oas_fred", "percentage points"),

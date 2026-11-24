@@ -1,18 +1,23 @@
+from pathlib import Path
+
 import pandas as pd
+import yaml
 
 from Data.DataBase.access import get_features, get_prices
 from ModelHome.RegimeHMM import regime_hmm, state_labels
 
-# The two models. Same maths (regime_hmm.py) used twice, just fed different features
-# Later these move into Config/model.yaml
-STRESS_FEATURES = ["log_vix", "credit_spread", "credit_spread_chg_20d"]
-# TODO v2: add "vix_term" back to STRESS_FEATURES once Bloomberg VIX3M history (2008) is loaded.
-#          Left out of v1 because it only starts 2009-09-18 and would cut 2008 out of the stress model.
-DIRECTION_FEATURES = ["trend_spy", "curve_slope"]
+# Settings come from Config/model.yaml (section regime_model), not from this file
+CONFIG_FILE = Path(__file__).resolve().parents[2] / "Config" / "model.yaml"
+with open(CONFIG_FILE, encoding="utf-8") as f:
+    SETTINGS = yaml.safe_load(f)["regime_model"]
 
-FIRST_DATE = "1990-01-01"   # pull history from here (each feature starts when it starts)
-REFIT_EVERY_MONTHS = 3      # refit every quarter (monthly = 1, slower backtests)
-MIN_HISTORY_DAYS = 1260     # ~5 years of data before the first fit
+# The two models. Same maths (regime_hmm.py) used twice, just fed different features
+STRESS_FEATURES = SETTINGS["stress_features"]
+DIRECTION_FEATURES = SETTINGS["direction_features"]
+
+FIRST_DATE = SETTINGS["first_date"]                    # pull history from here
+REFIT_EVERY_MONTHS = SETTINGS["refit_every_months"]    # how often to refit
+MIN_HISTORY_DAYS = SETTINGS["min_history_days"]        # data needed before the first fit
 
 
 class RegimeModel:
