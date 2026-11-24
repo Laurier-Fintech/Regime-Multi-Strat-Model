@@ -1,0 +1,12 @@
+# =============================================================================
+# Risk settings. Read by RiskManagement/.
+# All numbers are PLACEHOLDERS. Don't tune them to 2008 / 2020 / 2022 specifically.
+# =============================================================================
+
+vix_breaker:
+  jump_pct: 0.20               # trigger if VIX is up 20%+ from yesterday
+  level: 35                    # ... or VIX closes above this
+  short_vol_sleeves: [vol]     # whose weight gets cut (add equity once its short puts are live)
+  cut_share: 1.0               # share of their weight moved to reserve (1.0 = all of it)
+  hold_days: 5                 # stay cut this many days after the last trigger
+  rebuild_days: 10             # then give the weight back evenly over this many days

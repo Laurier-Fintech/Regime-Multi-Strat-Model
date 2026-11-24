@@ -1,0 +1,28 @@
+# =============================================================================
+# Backtest settings. Read by Backtesting/run_backtest.py and Backtesting/sim_broker.py.
+# All numbers are PLACEHOLDERS until we decide them.
+# =============================================================================
+
+run:
+  start: "2008-01-01"
+  end: "2026-11-11"
+  starting_cash: 1000000
+  sleeves_on: false            # false = ETF test (stand-in ETFs), true = Jacob's option sleeves
+  regime_run_id: null          # saved regime run to reuse (regime_store); null = run the regime live (slow)
+
+costs:
+  commission_per_share: 0.005  # IBKR-style
+  commission_min: 1.00         # per order
+  half_spread_bps: 1           # half the bid-ask spread, in basis points
+  slippage_bps: 2              # extra price movement against us
+
+rebalance:
+  min_trade_value: 1000        # skip trades smaller than this (dollars)
+
+# Sleeves OFF: each sleeve's weight goes into these ETFs (share of that sleeve's money).
+# Negative = short. "cash" = keep it as cash earning the T-bill rate.
+standin_etfs:
+  vol:     { cash: 1.0 }              # UNDECIDED: no tradable short-vol ETF with long history
+  equity:  { qqq: 1.0 }
+  spread:  { spy: 0.5, tlt: -0.5 }    # long stocks / short bonds (spy minus tlt)
+  reserve: { cash: 0.5, gld: 0.5 }    # T-bills + gold
