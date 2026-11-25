@@ -1,15 +1,11 @@
-from pathlib import Path
-
 import pandas as pd
-import yaml
 
 from Data.DataBase.access import get_features, get_prices
 from ModelHome.RegimeHMM import regime_hmm, state_labels
+from Config.settings import load
 
 # Settings come from Config/model.yaml (section regime_model), not from this file
-CONFIG_FILE = Path(__file__).resolve().parents[2] / "Config" / "model.yaml"
-with open(CONFIG_FILE, encoding="utf-8") as f:
-    SETTINGS = yaml.safe_load(f)["regime_model"]
+SETTINGS = load("model.yaml", "regime_model")
 
 # The two models. Same maths (regime_hmm.py) used twice, just fed different features
 STRESS_FEATURES = SETTINGS["stress_features"]

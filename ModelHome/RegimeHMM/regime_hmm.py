@@ -1,12 +1,9 @@
-from pathlib import Path
-
 import numpy as np
-import yaml
+
+from Config.settings import load
 
 # Settings come from Config/model.yaml (section regime_hmm), not from this file
-CONFIG_FILE = Path(__file__).resolve().parents[2] / "Config" / "model.yaml"
-with open(CONFIG_FILE, encoding="utf-8") as f:
-    SETTINGS = yaml.safe_load(f)["regime_hmm"]
+SETTINGS = load("model.yaml", "regime_hmm")
 
 def _guess(X, n_states, rng):
     T, F = X.shape

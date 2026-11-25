@@ -1,35 +1,59 @@
 # The simulated broker. Follows the Broker template in Portfolio/broker_interface.py,
 # so the engine can't tell it apart from IBKR. Fills every order right away, with costs.
-# Settings come from Config/backtest.yaml (section "costs")
+from Config.settings import load
+from Data.DataBase.access import get_prices
+from Portfolio.broker_interface import Broker, Fill
 
 
 class SimBroker(Broker):
+    """Fills orders at today's close, plus spread + slippage, minus commission"""
+
     def __init__(self):
-        costs = load the "costs" section of backtest.yaml
-        # commission_per_share, commission_min, slippage_bps, half_spread_bps
-        fill_count = 0
+        costs = load("backtest.yaml", "costs")
+        self.commission_per_share = costs["commission_per_share"]
+        self.commission_min = costs["commission_min"]
+        self.slippage_bps = costs["slippage_bps"]
+        self.half_spread_bps = costs["half_spread_bps"]
+        self.rejected = []     # orders we couldn't fill (no price that day)
 
     def send_orders(self, orders, as_of):
+        """Today's orders --> list of fills"""
+        if len(orders) == 0:
+            return []
+
+        # one price lookup for all of today's orders, only today's close (as_of --> no future)
+        ids = sorted(set(order.instrument_id for order in orders))
+        closes = get_prices(ids, as_of, as_of, as_of=as_of, field="close")
+
         fills = []
-        for each order:
-            close = today's close for order.instrument_id, from get_prices(..., as_of=as_of)
-            if no price today --> reject the order (can't trade what isn't trading), log it
+        for order in orders:
+            close = closes[order.instrument_id].iloc[0] if not closes.empty else None
+            if close is None or close != close:
+                self.rejected.append(order)
+                continue
 
-            # we pay up when buying and get less when selling
-            cost_bps = half_spread_bps + slippage_bps
-            if buying:  price = close * (1 + cost_bps / 10000)
-            if selling: price = close * (1 - cost_bps / 10000)
+            cost_bps = self.half_spread_bps + self.slippage_bps
+            if order.quantity > 0:
+                price = close * (1 + cost_bps / 10000)
+            else:
+                price = close * (1 - cost_bps / 10000)
 
-            commission = max(commission_min, |quantity| * commission_per_share)
+            commission = max(self.commission_min, abs(order.quantity) * self.commission_per_share)
 
-            fills.append(Fill(fill_id, order_id, as_of, sleeve, instrument, strategy, group,
-                              quantity = order.quantity, price, commission, fees = 0,
-                              fill_type = "trade", is_model_priced = False))
+            fills.append(Fill(fill_id=f"F-{order.order_id}",
+                              order_id=order.order_id,
+                              as_of=as_of,
+                              sleeve=order.sleeve,
+                              instrument_id=order.instrument_id,
+                              strategy_id=order.strategy_id,
+                              quantity=order.quantity,
+                              price=price,
+                              commission=commission,
+                              group_id=order.group_id))
         return fills
 
     def open_orders(self):
-        return []      # everything fills straight away in the simulation
-
+        return []      
 
 # LATER (options): option prices from the chain mid, or Common/option_pricing when missing
 #                  (is_model_priced = True), plus per-contract fees. See README option_history.py

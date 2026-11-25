@@ -4,6 +4,9 @@
 # trading days a year) stay in the code.
 # =============================================================================
 
+# The 4 moods (stress label - direction label), as RegimeModel names them
+moods: [calm-bull, calm-bear, stressed-bull, stressed-bear]
+
 # Read by ModelHome/RegimeHMM/regime_model.py
 regime_model:
   stress_features: [log_vix, credit_spread, credit_spread_chg_20d]
@@ -13,6 +16,8 @@ regime_model:
   first_date: "1990-01-01"     # pull history from here (each feature starts when it starts)
   refit_every_months: 3        # refit every quarter (monthly = 1, slower backtests)
   min_history_days: 1260       # ~5 years of data before the first fit
+  stress_label_feature: log_vix      # after each fit, the state with the higher average of this = stressed
+  direction_label_feature: trend_spy # ... and the state with the higher average of this = bull
 
 # Read by ModelHome/RegimeHMM/regime_hmm.py (the HMM maths)
 regime_hmm:

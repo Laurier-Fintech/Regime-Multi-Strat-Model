@@ -75,9 +75,11 @@ CREATE TABLE target_positions (
     as_of              DATE    NOT NULL,
     sleeve             VARCHAR NOT NULL CHECK (sleeve IN ('vol', 'equity', 'spread', 'reserve')),
     instrument_id      VARCHAR NOT NULL,
+    strategy_id        VARCHAR NOT NULL,         -- e.g. 'etf_standin', 'wheel', 'stress_put_spread'
+    group_id           VARCHAR NOT NULL DEFAULT '',  -- links option legs; '' = no group
     wanted_quantity    DOUBLE  NOT NULL,         -- from the sleeve
     approved_quantity  DOUBLE,                   -- after RiskManagement
-    PRIMARY KEY (run_id, as_of, sleeve, instrument_id)
+    PRIMARY KEY (run_id, as_of, sleeve, instrument_id, strategy_id, group_id)
 );
 
 -- Risk layer actions (cuts, vetoes, circuit breaker).
@@ -99,12 +101,14 @@ CREATE TABLE positions (
     as_of          DATE    NOT NULL,
     sleeve         VARCHAR NOT NULL CHECK (sleeve IN ('vol', 'equity', 'spread', 'reserve')),
     instrument_id  VARCHAR NOT NULL,
+    strategy_id    VARCHAR NOT NULL,             -- e.g. 'etf_standin', 'wheel', 'stress_put_spread'
+    group_id       VARCHAR NOT NULL DEFAULT '',  -- links option legs; '' = no group
     quantity       DOUBLE  NOT NULL,             -- signed: negative = short
     avg_cost       DOUBLE,
     market_price   DOUBLE,
     market_value   DOUBLE,
     is_model_priced BOOLEAN NOT NULL DEFAULT FALSE,  -- TRUE when no market price, valued with a model
-    PRIMARY KEY (run_id, as_of, sleeve, instrument_id)
+    PRIMARY KEY (run_id, as_of, sleeve, instrument_id, strategy_id, group_id)
 );
 
 CREATE TABLE orders (
@@ -113,6 +117,8 @@ CREATE TABLE orders (
     as_of          DATE      NOT NULL,
     sleeve         VARCHAR   NOT NULL CHECK (sleeve IN ('vol', 'equity', 'spread', 'reserve')),
     instrument_id  VARCHAR   NOT NULL,
+    strategy_id    VARCHAR   NOT NULL,
+    group_id       VARCHAR   NOT NULL DEFAULT '',  -- '' = no group
     quantity       DOUBLE    NOT NULL,           -- signed: positive = buy
     order_type     VARCHAR   NOT NULL DEFAULT 'market' CHECK (order_type IN ('market', 'limit')),
     limit_price    DOUBLE,
@@ -129,6 +135,8 @@ CREATE TABLE fills (
     as_of            DATE      NOT NULL,
     sleeve           VARCHAR   NOT NULL CHECK (sleeve IN ('vol', 'equity', 'spread', 'reserve')),
     instrument_id    VARCHAR   NOT NULL,
+    strategy_id      VARCHAR   NOT NULL,
+    group_id         VARCHAR   NOT NULL DEFAULT '',  -- '' = no group
     quantity         DOUBLE    NOT NULL,         -- signed: positive = bought
     price            DOUBLE    NOT NULL,
     commission       DOUBLE    NOT NULL DEFAULT 0,

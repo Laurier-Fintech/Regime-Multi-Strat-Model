@@ -12,27 +12,18 @@ Table used (see Data/DataBase/setup_run_once/schema_trading.sql):
 """
 
 import json
-import subprocess
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
 from Data.DataBase.access import get_trading_records
-from Data.DataBase.db import REPO_ROOT, append_rows, connect_trading
+from Data.DataBase import runs
+from Data.DataBase.db import append_rows, connect_trading
+from Data.DataBase.runs import finish_run
 from ModelHome.RegimeHMM import regime_model
+from Config.settings import load
 
-MOODS = ["calm-bull", "calm-bear", "stressed-bull", "stressed-bear"]
-
-
-def _git_commit():
-    """The current git commit, so we know which code made a run (None if git isn't there)"""
-    try:
-        out = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO_ROOT,
-                             capture_output=True, text=True, check=True)
-        return out.stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return None
+MOODS = load("model.yaml", "moods")
 
 
 def _settings():
@@ -48,35 +39,8 @@ def _settings():
 
 
 def start_run(con, start, end, mode="backtest", notes=None):
-    """Adds a row to the runs table and gives back its run_id
-
-    Keyword arguments:
-    con -- open connection from connect_trading()
-    start, end -- first and last day of the run
-    mode -- 'backtest', 'paper' or 'live'
-    notes -- free text, e.g. 'rolling 10y window test'
-    Return: run_id e.g. 'regime_20261123_143005'
-    """
-    run_id = "regime_" + datetime.now().strftime("%Y%m%d_%H%M%S")
-    row = pd.DataFrame([{
-        "run_id": run_id,
-        "mode": mode,
-        "git_commit": _git_commit(),
-        "config_snapshot": _settings(),
-        "start_date": pd.Timestamp(start).date(),
-        "end_date": pd.Timestamp(end).date(),
-        "started_at": datetime.now(),
-        "status": "running",
-        "notes": notes,
-    }])
-    append_rows(con, "runs", row)
-    return run_id
-
-
-def finish_run(con, run_id, status="finished"):
-    """Marks a run as 'finished' or 'failed' and stamps the time"""
-    con.execute("UPDATE runs SET status = ?, finished_at = ? WHERE run_id = ?",
-                [status, datetime.now(), run_id])
+    """Adds a regime run to "runs" --> run_id e.g. 'regime_20261123_143005'"""
+    return runs.start_run(con, "regime", start, end, _settings(), mode, notes)
 
 
 def write_regime_probs(con, run_id, probs):

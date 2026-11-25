@@ -4,7 +4,8 @@
 # =============================================================================
 
 vix_breaker:
-  jump_pct: 0.20               # trigger if VIX is up 20%+ from yesterday
+  jump_pct: 0.20               # trigger if VIX is up 20%+ from yesterday ...
+  jump_min_level: 25           # ... AND VIX is at least this (so 14 --> 18 doesn't count)
   level: 35                    # ... or VIX closes above this
   short_vol_sleeves: [vol]     # whose weight gets cut (add equity once its short puts are live)
   cut_share: 1.0               # share of their weight moved to reserve (1.0 = all of it)

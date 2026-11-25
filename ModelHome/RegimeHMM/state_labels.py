@@ -1,5 +1,9 @@
 import numpy as np
 
+from Config.settings import load
+
+SETTINGS = load("model.yaml", "regime_model")
+
 
 def _swap(params, order):
     """Helper: applies the new order to pi, A, means and covs so nothing gets mixed up
@@ -31,11 +35,11 @@ def name_states(params, feature_names, kind):
     Return: the same params dict but reordered, plus the labels in order e.g. ['calm', 'stressed']
     """
     if kind == "stress":
-        col = feature_names.index("log_vix")
+        col = feature_names.index(SETTINGS["stress_label_feature"])
         labels = ["calm", "stressed"]
         order = np.argsort(params['means'][:, col])
     elif kind == "direction":
-        col = feature_names.index("trend_spy")
+        col = feature_names.index(SETTINGS["direction_label_feature"])
         labels= ["bull", "bear"]
         order = np.argsort(params["means"][:, col])[::-1]
     else:

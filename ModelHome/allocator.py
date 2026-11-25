@@ -1,20 +1,17 @@
-from pathlib import Path
-
-import yaml
 import pandas as pd
 
-# Settings come from Config/model.yaml (section allocator), not from this file
-MOODS_CHECK = ["stressed-bear", "calm-bull", "stressed-bull", "calm-bear"]
-SLEEVES_CHECK = ["vol", "equity", "spread", "reserve"]
+from Config.settings import load, sleeves
+
+# Settings come from Config/model.yaml (section allocator) and configs.yaml, not from this file
+MOODS_CHECK = load("model.yaml", "moods")
+SLEEVES_CHECK = sleeves()
 
 def _load_and_check():
     """Reads the allocator settings from model.yaml and checks them
 
     Return: mixes (rows = moods, cols = sleeves), smoothing_step, no_trade_band
     """
-    CONFIG_FILE = Path(__file__).resolve().parents[1] / "Config" / "model.yaml"
-    with open(CONFIG_FILE, encoding="utf-8") as f:
-        SETTINGS = yaml.safe_load(f)["allocator"]
+    SETTINGS = load("model.yaml", "allocator")
     mixes = SETTINGS['mood_mixes']
 
     # all 4 moods must be there

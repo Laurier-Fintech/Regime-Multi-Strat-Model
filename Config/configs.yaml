@@ -24,6 +24,10 @@ data_sources:
   - ibkr          # live data; no history for expired options
 
 regime_model: hmm               # hidden Markov model, outputs probabilities
+trading_days_per_year: 252      # used to turn yearly rates into daily ones
+
+portfolio:
+  price_lookback_days: 10       # no price today (holiday, gap)? use the last one from this many days back
 
 sleeves:
   vol:      { name: "A - Volatility",        bets_on: size_of_moves }

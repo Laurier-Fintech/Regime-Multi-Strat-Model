@@ -27,7 +27,7 @@ CONFIG_FILE = REPO_ROOT / "Config" / "configs.yaml"
 SETUP_DIR = Path(__file__).resolve().parent / "setup_run_once"
 
 MARKET_SCHEMA_VERSION = 1
-TRADING_SCHEMA_VERSION = 1
+TRADING_SCHEMA_VERSION = 2   # v2: strategy_id + group_id on positions/target_positions/orders/fills
 
 
 # -----------------------------------------------------------------------------

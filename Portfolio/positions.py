@@ -1,41 +1,70 @@
-# What we hold right now. One row ("slice") per sleeve + instrument + strategy + group,
-# so we always know which strategy owns what (Jacob's sleeves need this)
+import pandas as pd
 
 
 class Positions:
-    def __init__(self):
-        holdings = empty table
-        # columns: sleeve, instrument_id, strategy_id, group_id, quantity, avg_cost, multiplier
-        # multiplier: 1 for ETFs / shares, 100 for a US option
+    """The holdings book. A class because it remembers what we hold from day to day"""
 
-    def apply_fill(self, fill, multiplier):
-        # find the slice this fill belongs to (sleeve, instrument, strategy, group)
-        # if no slice yet --> add one with quantity 0
-        old_qty, old_cost = that slice's quantity and avg_cost
+    def __init__(self):
+        # key = (sleeve, instrument_id, strategy_id, group_id) --> {"quantity", "avg_cost", "multiplier"}
+        self.holdings = {}
+
+    def apply_fill(self, fill, multiplier=1):
+        """Updates one slice with a fill. multiplier: 1 for ETFs / shares, 100 for a US option"""
+        key = (fill.sleeve, fill.instrument_id, fill.strategy_id, fill.group_id)
+        if key not in self.holdings:
+            self.holdings[key] = {"quantity": 0, "avg_cost": 0.0, "multiplier": multiplier}
+
+        old_qty = self.holdings[key]["quantity"]
+        old_cost = self.holdings[key]["avg_cost"]
         new_qty = old_qty + fill.quantity
 
-        if buying more of a long (or selling more of a short):
-            # average cost moves toward the fill price
+        if old_qty == 0 or old_qty * fill.quantity > 0:
+            # opening, or adding to the same side --> avg cost moves toward the fill price
             avg_cost = (old_qty * old_cost + fill.quantity * fill.price) / new_qty
+        elif old_qty * new_qty < 0:
+            # flipped through zero (long --> short) --> the new side started at this price
+            avg_cost = fill.price
         else:
-            # reducing a holding: avg_cost stays the same (the profit/loss is realised in cash)
+            # reducing --> avg cost stays, the profit / loss shows up in cash
             avg_cost = old_cost
-        if crossing through zero (long --> short):
-            avg_cost = fill.price for the new side
 
-        if new_qty == 0 --> remove the slice
-        else --> save new_qty, avg_cost
+        if new_qty == 0:
+            del self.holdings[key]
+        else:
+            self.holdings[key]["quantity"] = new_qty
+            self.holdings[key]["avg_cost"] = avg_cost
+
+    def quantity(self, sleeve, instrument_id, strategy_id, group_id=None):
+        """How much of one slice we hold (0 if none)"""
+        key = (sleeve, instrument_id, strategy_id, group_id)
+        if key not in self.holdings:
+            return 0
+        return self.holdings[key]["quantity"]
 
     def held(self, sleeve=None):
-        # the holdings table, optionally for one sleeve only
-        return holdings (filtered)
+        """The holdings as a table, optionally for one sleeve only"""
+        rows = []
+        for (s, instrument_id, strategy_id, group_id), h in self.holdings.items():
+            if sleeve is None or s == sleeve:
+                rows.append({"sleeve": s, "instrument_id": instrument_id, "strategy_id": strategy_id,
+                             "group_id": group_id, **h})
+        columns = ["sleeve", "instrument_id", "strategy_id", "group_id", "quantity", "avg_cost", "multiplier"]
+        return pd.DataFrame(rows, columns=columns)
 
     def net_by_instrument(self):
-        # add slices together per instrument --> what the broker actually sees
-        # e.g. two sleeves both holding SPY --> one SPY number
-        return quantity summed by instrument_id
+        """Slices added up per instrument --> what the broker actually sees"""
+        return self.held().groupby("instrument_id")["quantity"].sum()
 
     def to_rows(self, run_id, as_of, prices):
-        # end-of-day rows for trading.duckdb "positions"
-        # adds market_price and market_value = quantity * price * multiplier
-        return table
+        """End-of-day rows for trading.duckdb "positions"
+
+        Keyword arguments:
+        prices -- today's price per instrument_id (from valuation.price_holdings)
+        """
+        rows = self.held()
+        rows["market_price"] = rows["instrument_id"].map(prices)
+        rows["market_value"] = rows["quantity"] * rows["market_price"] * rows["multiplier"]
+        rows["group_id"] = rows["group_id"].fillna("")     # the database uses "" for no group
+        rows["run_id"] = run_id
+        rows["as_of"] = as_of
+        return rows.drop(columns="multiplier")

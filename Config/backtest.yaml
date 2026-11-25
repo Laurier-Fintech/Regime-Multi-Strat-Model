@@ -19,6 +19,8 @@ costs:
 rebalance:
   min_trade_value: 1000        # skip trades smaller than this (dollars)
 
+standin_strategy_id: etf_standin   # strategy tag on stand-in ETF holdings
+
 # Sleeves OFF: each sleeve's weight goes into these ETFs (share of that sleeve's money).
 # Negative = short. "cash" = keep it as cash earning the T-bill rate.
 standin_etfs:
