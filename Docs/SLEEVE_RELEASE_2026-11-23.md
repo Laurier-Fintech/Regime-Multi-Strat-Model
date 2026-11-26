@@ -98,7 +98,7 @@ liquidity, profitability or live readiness.
 
 - [Jacob's running progress](JACOB_PROGRESS.md)
 - [Target integration contracts and policies](SLEEVE_TARGET_INTEGRATION.md)
-- [Project manager and lead briefing](../output/pdf/Jacob_Equity_and_Volatility_Sleeve_Briefing.pdf)
+- [Project manager and lead briefing](output/pdf/Jacob_Equity_and_Volatility_Sleeve_Briefing.pdf)
 - [Team sprint tracker](SPRINTS.md)
 
 The release excludes personal `.vscode` settings, virtual environments,

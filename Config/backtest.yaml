@@ -8,7 +8,7 @@ run:
   end: "2026-11-11"
   starting_cash: 1000000
   sleeves_on: false            # false = ETF test (stand-in ETFs), true = Jacob's option sleeves
-  regime_run_id: null          # saved regime run to reuse (regime_store); null = run the regime live (slow)
+  regime_run_id: regime_20261126_105554          # saved regime run to reuse (regime_store); null = run the regime live (slow)
 
 costs:
   commission_per_share: 0.005  # IBKR-style
@@ -24,7 +24,10 @@ standin_strategy_id: etf_standin   # strategy tag on stand-in ETF holdings
 # Sleeves OFF: each sleeve's weight goes into these ETFs (share of that sleeve's money).
 # Negative = short. "cash" = keep it as cash earning the T-bill rate.
 standin_etfs:
-  vol:     { cash: 1.0 }              # UNDECIDED: no tradable short-vol ETF with long history
+  vol:                                # switches with the mood, blended by P(stressed):
+    calm:     { putw_index: 1.0 }       #   calm     --> sell vol (CBOE PutWrite index, daily from 2007)
+    stressed: { vixy: 1.0 }             #   stressed --> buy vol (VIXY, from 2011; before that it stays cash)
   equity:  { qqq: 1.0 }
   spread:  { spy: 0.5, tlt: -0.5 }    # long stocks / short bonds (spy minus tlt)
   reserve: { cash: 0.5, gld: 0.5 }    # T-bills + gold
+

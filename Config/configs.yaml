@@ -29,6 +29,9 @@ trading_days_per_year: 252      # used to turn yearly rates into daily ones
 portfolio:
   price_lookback_days: 10       # no price today (holiday, gap)? use the last one from this many days back
 
+output:
+  charts_dir: Docs/output/charts   # PNG charts from tests/run_regime.py and tests/run_v1_test.py
+
 sleeves:
   vol:      { name: "A - Volatility",        bets_on: size_of_moves }
   equity:   { name: "B - Equity options",    bets_on: direction }

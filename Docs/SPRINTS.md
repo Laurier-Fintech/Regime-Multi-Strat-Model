@@ -33,55 +33,73 @@ What's done, what's next, and who owns it. Tick a box when it's merged into `mai
 
 ---
 
-## Sprint 2: working system v1.0
+## Sprint 2: working system v1.0 (closed 2026-11-26)
 
-### Graydon: finish the regime and allocations
-- [ ] Run the regime on real data from 1995
-- [ ] **Fix stuck states** (see below)
-- [ ] Check stressed lights up in 1998, 2001, 2008, 2011, 2020, 2022
-- [ ] Allocator: mood mixes, blend by probability, smoothing
-- [ ] VIX circuit breaker (moves weight to the reserve on a VIX jump)
-- [ ] Output allocations, then test them on base ETFs with sleeves off
+v1.0 = the whole system running with the sleeves **off** (stand-in ETFs). Sleeves **on** is v2.0 (Sprint 3).
+
+### Regime and allocations (Armaan, took over Graydon's part)
+- [x] Run the regime on real data from 1995, saved to `trading.duckdb` and reused by every backtest (`regime_store.py`)
+- [x] **Fixed stuck states.** Diagnosis ([Docs/output/diagnosis](output/diagnosis/stuck_states_progress.md)): the `credit_spread`
+      level stuck stress on 2008–2010, the `curve_slope` level stuck direction on "bear" 2008–2015. Fix: `log_vix` and
+      `credit_spread` go in as z-scores vs their last year; direction uses `trend_spy` only
+- [x] Stressed lights up in 2008, 2011, 2020, 2022 (1998 / 2001 are before the z-scored model's first output, ~2004)
+- [x] Allocator: hand-set mood mixes (`Config/model.yaml`), blended by probability, smoothing + no-trade band
+- [x] VIX circuit breaker: VIX up 20%+ from 25+, or above 35 → vol sleeve weight to reserve, hold 5 days, rebuild over 10
+- [x] Allocations tested on stand-in ETFs with sleeves off (`tests/run_v1_test.py`)
 
 ### Jacob: options and sleeves
 - [x] Shared option pricer and greeks: Black-Scholes-Merton, Black-76 and CRR, with shared unit conventions and tests
 - [x] Shared four-state sleeve context, quote validation and explicit gross funding checks
 - [x] Equity wheel state, coverage, put/call selection, bearish spreads and complete desired targets
 - [x] Volatility data/signal pipeline, structure selection, sizing, delta hedging and complete desired targets
-- [ ] Sleeve 2: TQQQ wheel production integration and historical validation (Portfolio, execution, assignment and real contract adapters remain)
-- [ ] Volatility production integration and historical validation (real chains, point-in-time training and funding/delta adapters remain)
-- [ ] Reserve sleeve
+- [ ] Moved to Sprint 3 (v2.0): wheel and volatility production integration, historical validation, reserve sleeve
 
 Sleeve implementation details, breaking interface changes and verification are
 recorded in [the 2026-11-23 release notes](SLEEVE_RELEASE_2026-11-23.md).
-The implementation release has 187 passing tests; it does not complete the
-remaining production connections or demonstrate strategy performance.
 
-### Armaan: backtest and wiring
-- [ ] Backtest engine: positions, P&L, costs
-- [ ] Wire everything together: version 1.0
+### Backtest and wiring (Armaan)
+- [x] Portfolio: positions (sleeve / strategy / group slices), cash ledger, valuation (NAV + P&L), rebalancer, broker plug
+- [x] Simulated broker: fills at the close + half-spread + slippage, IBKR-style commission
+- [x] Engine (`ModelHome/engine.py`): the daily loop, sleeves on/off switch (on raises "not wired yet")
+- [x] Speed-up: prices / VIX / T-bill / dividends / splits loaded once per run (`market_book.py`), full run ~5 min
+- [x] Tests: `system_check.py` (12 checks, seconds), `run_regime.py`, `run_v1_test.py` (7 checks + report + charts)
 
 ### Data layer
-- [ ] `write_regime_probs`: save daily regime output to `trading.duckdb`, so backtests reuse it instead of re-running the regime (a full regime run takes 20+ minutes)
-- [ ] Fix the credit-spread fallback: use FRED only after Bloomberg's last date, then rebuild features
+- [x] `write_regime_probs` / `load_regime_probs` (`regime_store.py`), shared `runs` helper (`Data/DataBase/runs.py`)
+- [x] Credit-spread fallback fixed: FRED only after Bloomberg's last date, features rebuilt
+- [x] Every tunable number moved to `Config/*.yaml`, read through `Config/settings.py`
+- [x] Trading schema v2: `strategy_id` + `group_id` on positions / target_positions / orders / fills
+- [x] New data: CBOE PutWrite index (`putw_index`, vol stand-in in calm moods) and VIXY (`vixy`, in stressed moods)
 
-### Known problem: stuck states
-In a 2005–2012 test run, stressed switched on in Q3 2007 (good) but stayed at 100% until 2011, and bear stayed at 100% through 2012. The model is likely splitting "before 2008" vs "after 2008", because feature levels (e.g. credit spread) sat higher after 2008 even on calm days. Try:
-- changes, or levels relative to the last year, instead of raw levels
-- a rolling training window (e.g. last 10 years) instead of all history
-- fitting one feature at a time to find the cause
-
-### Speed notes
-- Live trading: a normal day takes ~0.05 s; a refit day (once a quarter) ~10–40 s.
-- Full regime backtest from 1995: 20+ minutes. Save the output once (`write_regime_probs`) and reuse it.
-- If still slow: refit twice a year, or use a rolling window.
+### v1.0 result (2008-01-02 → 2026-11-11, sleeves off, all 7 checks pass)
+| | v1.0 | SPY |
+|---|---|---|
+| Yearly return | 8.4% | 11.2% |
+| Yearly vol | 9.8% | 19.7% |
+| Worst drop | −15.8% | −51.9% |
+| Sharpe / Sortino | 0.72 / 1.01 | 0.56 / 0.80 |
+| Turnover | 4.2× a year | |
 
 ---
 
-## Sprint 3
+## Sprint 3: v2.0 (sleeves on) and tuning
 
+### Sleeves on (v2.0)
+- [ ] `Portfolio/snapshots.py`: Jacob's `EquityPortfolioSnapshot` from our positions / ledger (pseudocode written)
+- [ ] `Portfolio/lifecycle.py`: option expiry and assignment for the wheel (pseudocode written)
+- [ ] Simulated broker prices options from the implied-vol grid (`is_model_priced`), per-contract fees
+- [ ] Engine: build `SleeveContext` per sleeve, collect targets, pass the whole book through RiskManagement
+- [ ] Jacob: reserve sleeve, contract / funding / delta adapters, historical validation of both sleeves
 - [ ] Sleeve 3: spread sleeve
+
+### Tuning and model
+- [ ] Learned mood mixes from sleeve stand-in returns per mood, with caps and a pull toward equal weights
+- [ ] Tune placeholders (mixes, smoothing, band, breaker, costs). Don't fit them to 2008 / 2020 / 2022 specifically
+- [ ] Turnover went 2.5× → 4.2× with z-scores: z-scores are relative, so a small VIX rise after a calm year reads "stressed"
 - [ ] Add `vix_term` back to the stress model once Bloomberg VIX3M history (2008) is loaded
+- [ ] `credit_spread_chg_20d` is a 20-*month* change in 1994–97 (Bloomberg monthly then); only matters for pre-2000 runs
+
+### Data and live
 - [ ] Clean implied-vol glitch cells (~107 candidates on 29 dates)
 - [ ] Make publish-lag calculation skip holidays
 - [ ] Live IBKR connection and paper trading

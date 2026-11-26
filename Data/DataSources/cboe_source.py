@@ -1,8 +1,10 @@
 """
-CBOE free daily index files (VIX, VIX3M, VIX9D, VVIX, VXN, SKEW, OVX, GVZ).
+CBOE free daily index files (VIX, VIX3M, VIX9D, VVIX, VXN, SKEW, OVX, GVZ, PUT).
 
 Each file is the full history. Some have DATE,OPEN,HIGH,LOW,CLOSE; others
-have DATE,<NAME>. We store the daily close in raw.series.
+have DATE,<NAME>. We store the daily close in raw.series, or in raw.prices
+(close as every bar field) when meta.series says storage = 'prices', so an
+index like PUT can be "held" in a backtest.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ from datetime import datetime
 import pandas as pd
 import requests
 
-from Data.DataBase.db import write_series
+from Data.DataBase.db import write_prices, write_series
 from Data.DataSources._common import active_series, drop_today, run_each
 
 URL = "https://cdn.cboe.com/api/global/us_indices/daily_prices/{code}_History.csv"
@@ -36,10 +38,18 @@ def fetch(source_code: str) -> pd.DataFrame:
 
 
 def refresh(con, refresh_id: str, fetched_at: datetime):
+    storage = dict(con.execute("SELECT series_id, storage FROM meta.series WHERE source = 'cboe'").fetchall())
+
     def one(series_id: str, code: str) -> int:
         df = drop_today(fetch(code))
         df["series_id"] = series_id
         time.sleep(0.5)
+        if storage[series_id] == "prices":
+            # an index has no bar or volume: the close stands in for every field
+            for col in ["open", "high", "low", "close", "adj_close"]:
+                df[col] = df["value"]
+            df["volume"] = 0.0
+            return write_prices(con, df, fetched_at)
         return write_series(con, df, fetched_at)
 
     return run_each(con, refresh_id, "cboe", active_series(con, "cboe"), one)

@@ -5,7 +5,14 @@ Every setting the system uses, in one place, kept **separate from the code**. Th
 
 Think of it as the control panel. The machine stays the same, and you turn the dials here.
 
-## Files that will live here (planned)
+## Status (v1.0, 2026-11-26)
+- **Built:** `configs.yaml` (base facts, trading days, portfolio and output settings), `model.yaml` (regime, z-scores,
+  mood mixes, smoothing, band), `backtest.yaml` (dates, cash, costs, sleeves on/off, stand-ins, `regime_run_id`),
+  `risk.yaml` (VIX breaker), and `settings.py` (`load(file, section)` and `sleeves()`, used by every module).
+- **Rule:** no tunable number lives in the code. Most numbers here are still placeholders.
+- **Not built yet:** `universe.yaml`, `sleeves.yaml`.
+
+## Files
 | File | What it does | Complexity |
 |---|---|---|
 | `universe.yaml` | Which instruments each sleeve may trade, and which data series feed the regime model. | Low |

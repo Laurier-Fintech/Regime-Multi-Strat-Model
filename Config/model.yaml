@@ -12,12 +12,16 @@ regime_model:
   stress_features: [log_vix, credit_spread, credit_spread_chg_20d]
   # TODO v2: add vix_term to stress_features once Bloomberg VIX3M history (2008) is loaded.
   #          Left out of v1 because it only starts 2009-09-18 and would cut 2008 out of the stress model.
-  direction_features: [trend_spy, curve_slope]
+  direction_features: [trend_spy]   # curve_slope dropped: its LEVEL stuck direction on "bear" 2008-2015 (see Docs/output/diagnosis)
   first_date: "1990-01-01"     # pull history from here (each feature starts when it starts)
   refit_every_months: 3        # refit every quarter (monthly = 1, slower backtests)
   min_history_days: 1260       # ~5 years of data before the first fit
+  zscore_features: [log_vix, credit_spread]   # level features fed as z-scores vs their last year (fixes stuck states). [] = off
+  zscore_window: 252           # trading days in that window
   stress_label_feature: log_vix      # after each fit, the state with the higher average of this = stressed
   direction_label_feature: trend_spy # ... and the state with the higher average of this = bull
+  run_start: "1995-01-01"      # tests/run_regime.py runs the regime from here to the latest data
+  stressed_years: [1998, 2001, 2008, 2011, 2020, 2022]   # crises "stressed" should light up in
 
 # Read by ModelHome/RegimeHMM/regime_hmm.py (the HMM maths)
 regime_hmm:

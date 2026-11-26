@@ -35,6 +35,8 @@ def _settings():
         "first_date": regime_model.FIRST_DATE,
         "refit_every_months": regime_model.REFIT_EVERY_MONTHS,
         "min_history_days": regime_model.MIN_HISTORY_DAYS,
+        "zscore_features": regime_model.ZSCORE_FEATURES,
+        "zscore_window": regime_model.ZSCORE_WINDOW,
     })
 
 
@@ -74,14 +76,19 @@ def write_regime_probs(con, run_id, probs):
     return append_rows(con, "regime_probs", long[["run_id", "as_of", "state", "probability"]])
 
 
-def load_regime_probs(run_id):
+def load_regime_probs(run_id, con=None):
     """Reads a saved run back in the same shape RegimeModel.run() gives
 
     Keyword arguments:
     run_id -- which run to load
+    con -- an already-open trading.duckdb connection (the engine passes its own,
+           DuckDB won't open a second one to the same file). None = open read-only
     Return: table, one row per day (date index), one column per mood
     """
-    long = get_trading_records("regime_probs", run_id)
+    if con is None:
+        long = get_trading_records("regime_probs", run_id)
+    else:
+        long = con.execute("SELECT * FROM regime_probs WHERE run_id = ?", [run_id]).df()
     if long.empty:
         raise ValueError(f"no regime_probs saved for run_id {run_id}")
     wide = long.pivot(index="as_of", columns="state", values="probability")

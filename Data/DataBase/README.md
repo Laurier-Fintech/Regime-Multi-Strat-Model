@@ -46,7 +46,7 @@ A revised value is added as a **new row** with a later `known_at`; nothing is ev
 | `allocations` | run_id, as_of, sleeve, target_weight, capital |
 | `target_positions` | What each sleeve wanted, and what risk approved |
 | `risk_events` | Cuts, vetoes and circuit-breaker actions |
-| `positions`, `orders`, `fills` | Holdings, orders and fills, tagged by sleeve (fills flag model-priced options) |
+| `positions`, `orders`, `fills` | Holdings, orders and fills, tagged by sleeve, `strategy_id` and `group_id` (schema v2; `''` = no group). Fills flag model-priced options |
 | `cash_ledger` | Every cash movement |
 | `nav` | Daily NAV per sleeve and `total` |
 
@@ -56,6 +56,8 @@ A revised value is added as a **new row** with a later `known_at`; nothing is ev
 | [setup_run_once/](setup_run_once/) | **ONE-TIME.** `create_databases.py` + the two schema files. Run once per computer. |
 | `db.py` | Opens the two files (market data read-only by default) and holds the write helpers: `write_*` for DataSources, `append_rows` for trading records. |
 | `access.py` | **The only way the rest of the system reads data.** |
+| `market_book.py` | The backtest speed-up: loads every price / series / dividend / split version for a run once, then answers each day from memory with the same as-of rule (`tests/system_check.py` checks it matches `access.py`). |
+| `runs.py` | One row in `trading.duckdb` `runs` per run: `start_run`, `finish_run` (used by `regime_store.py` and `run_backtest.py`). |
 | `*.duckdb` | The database files. **Never committed to Git.** |
 
 ## How to read data (`access.py`)
@@ -70,6 +72,7 @@ get_features(feature_ids, start, end=None, *, as_of, ffill_limit=None, include_m
 get_dividends(series_ids, start, end=None, *, as_of)                                 # long format
 get_option_iv(underlyings, start, end=None, *, as_of, tenor_days=None, moneyness_type=None, source=None, include_metadata=False)
 get_option_chain(underlying, *, as_of, obs_date=None, expiry_from=None, expiry_to=None, source=None, include_metadata=False)
+get_versions(source, series_ids, start, end=None, *, as_of)   # every version + known_at (prices/series/dividends/splits), for market_book.py
 list_series(), list_features()
 get_trading_records(table, run_id=None)       # reads trading.duckdb (for Reporting)
 close()                                       # release the read connection

@@ -2,9 +2,8 @@ from datetime import datetime
 
 import pandas as pd
 
-from Config.settings import load
-from Data.DataBase.access import get_dividends, get_series
 from Data.DataBase.db import append_rows
+from Data.DataBase.market_book import MarketBook
 from ModelHome.allocator import Allocator
 from ModelHome.RegimeHMM.regime_model import RegimeModel
 from ModelHome.RegimeHMM.regime_store import load_regime_probs
@@ -17,8 +16,6 @@ from RiskManagement.circuit_breaker import VixBreaker
 # Only the broker and the list of days change.
 # Sleeves OFF (backtest.yaml) --> buy the stand-in ETFs at the allocator's weights
 # Sleeves ON                  --> Jacob's sleeves turn their budgets into option positions (not wired yet)
-
-LOOKBACK_DAYS = load("configs.yaml", "portfolio")["price_lookback_days"]
 
 
 class Engine:
@@ -44,7 +41,7 @@ class Engine:
 
         # regime: a saved run is fast, the live model is slow (20+ min from 1995)
         if run["regime_run_id"]:
-            self.saved_probs = load_regime_probs(run["regime_run_id"])
+            self.saved_probs = load_regime_probs(run["regime_run_id"], con)
             self.regime = None
         else:
             self.saved_probs = None
@@ -53,12 +50,13 @@ class Engine:
         self.allocator = Allocator()
         self.breaker = VixBreaker()
         self.positions = Positions()
-        self.ledger = Ledger(run["starting_cash"], pd.Timestamp(run["start"]).date())
+        self.starting_cash = run["starting_cash"]
+        self.ledger = None    # made in run(), dated on the FIRST TRADING day (not a holiday start date)
         self.yesterday_nav = None
         self.saved = {}       # table name --> list of daily DataFrames, written once at the end
 
         # every ETF the stand-ins can hold ("cash" isn't an ETF)
-        self.etfs = sorted({etf for etfs in self.standin_etfs.values() for etf in etfs if etf != "cash"})
+        self.etfs = rebalancer.standin_ids(self.standin_etfs)
 
     def _save(self, table, rows):
         """Keeps today's rows for one table, written to the database in flush()"""
@@ -79,16 +77,19 @@ class Engine:
         return self.regime.update(day)
 
     def _start_of_day(self, day):
-        """Money that arrives before we trade: dividends on what we held overnight, one day of T-bill interest"""
+        """Before we trade: splits and dividends on what we held overnight, one day of T-bill interest"""
         held = self.positions.held()
         if len(held) > 0:
-            dividends = get_dividends(sorted(held["instrument_id"].unique()), day, day, as_of=day)
-            for _, d in dividends.iterrows():
-                for _, h in held[held["instrument_id"] == d["series_id"]].iterrows():
-                    self.ledger.record_dividend(day, h["sleeve"], d["series_id"], h["quantity"], d["dividend"])
+            # a split changes the share count, not the value (e.g. vixy 1-for-4: shares x 0.25, price x 4)
+            for sid, ratio in self.book.splits(sorted(held["instrument_id"].unique()), day).items():
+                self.positions.apply_split(sid, ratio)
+            held = self.positions.held()
+            dividends = self.book.dividends(sorted(held["instrument_id"].unique()), day)
+            for sid, per_share in dividends.items():
+                for _, h in held[held["instrument_id"] == sid].iterrows():
+                    self.ledger.record_dividend(day, h["sleeve"], sid, h["quantity"], per_share)
 
-        start = pd.Timestamp(day) - pd.Timedelta(days=LOOKBACK_DAYS)
-        rate = get_series("tbill_3m", start, day, as_of=day)["tbill_3m"].dropna()
+        rate = self.book.series("tbill_3m", day)
         if len(rate) > 0:
             self.ledger.record_interest(day, rate.iloc[-1])
 
@@ -102,8 +103,11 @@ class Engine:
         # 2. Allocate: weight per sleeve + reserve (None while warming up --> hold cash, no trades)
         weights = self.allocator.update(probs)
 
-        held_ids = list(self.positions.held()["instrument_id"].unique())
-        prices, stale = valuation.price_holdings(sorted(set(self.etfs) | set(held_ids)), day)
+        # what we hold MUST have a price; a stand-in with no price yet (vixy before 2011) just stays cash
+        held_ids = sorted(self.positions.held()["instrument_id"].unique())
+        prices, stale = valuation.price_holdings(held_ids, day, self.book)
+        for sid, (price, _) in self.book.last_prices(self.etfs, day).items():
+            prices.loc[sid] = price
 
         if weights is not None:
             # 3. VIX breaker: trims short-vol weight on a VIX jump
@@ -113,7 +117,8 @@ class Engine:
             nav_total = valuation.nav(self.positions, self.ledger, prices).loc["total", "nav"]
 
             # 5. What we want to hold (sleeves off --> stand-in ETFs)
-            wanted = rebalancer.weights_to_wanted(weights, nav_total, self.standin_etfs, prices)
+            p_stressed = probs["stressed-bull"] + probs["stressed-bear"]
+            wanted = rebalancer.weights_to_wanted(weights, nav_total, self.standin_etfs, prices, p_stressed)
 
             # 6. Risk: pass-through for v1.0 (exposure caps come later)
             approved = wanted
@@ -165,6 +170,13 @@ class Engine:
 
     def run(self, days):
         """Every day in order, then write it all to the database"""
+        # deposit on day 1, else day 1's P&L counts the starting money as profit
+        self.ledger = Ledger(self.starting_cash, days[0])
+
+        # speed-up: load every price / VIX / T-bill / dividend for the whole run once
+        self.book = MarketBook(self.etfs, ["vix", "tbill_3m"], days[0], days[-1])
+        self.broker.book = self.book
+        self.breaker.book = self.book
         for day in days:
             self.step(day)
         self.flush()

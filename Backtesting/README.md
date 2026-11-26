@@ -11,7 +11,15 @@ Think of it as a flight simulator. It's the same cockpit and the same controls a
 
 The backtester works with the sleeves **off** (regime + allocator on plain ETFs, the first test) or **on** (the full options system). The switch lives in [Config](../Config/).
 
-## Files that will live here (planned)
+## Status (v1.0, 2026-11-26)
+- **Built:** `sim_broker.py` (fills at the day's close + half-spread + slippage, IBKR-style commission; no price that
+  day = order skipped) and `run_backtest.py` (dates, costs, sleeves on/off and stand-ins from `Config/backtest.yaml`).
+- **Run it:** `python tests/run_v1_test.py` (needs a saved regime run, see the root README). ~5 min for 2008 → today.
+- **Sleeves off stand-ins:** vol = PutWrite index in calm moods / VIXY in stressed moods (blended by P(stressed)),
+  equity = QQQ, spread = long SPY / short TLT, reserve = half cash, half GLD.
+- **Not built yet (v2.0):** `margin.py`, `assignment.py`, `option_history.py` (options priced from the IV grid).
+
+## Files
 | File | What it does | Complexity |
 |---|---|---|
 | `sim_broker.py` | The simulated broker. It fits the same "plug" as the live broker (see [Portfolio](../Portfolio/)). It takes orders and returns fills with realistic **bid-ask spreads, slippage and commissions**. | High |

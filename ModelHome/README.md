@@ -11,15 +11,24 @@ Think of it as the head chef and the kitchen timer together. The chef decides ho
 
 **What this folder never does:** fill orders. Fills come from a broker that is plugged in from outside: the simulated broker in [Backtesting](../Backtesting/), or the live broker in [Execution](../Execution/). Swapping that plug is the only difference between a backtest and live trading.
 
-## Files that will live here (planned)
+## Status (v1.0, 2026-11-26)
+- **Built:** `RegimeHMM/` (regime_hmm, state_labels, regime_model, regime_store), `allocator.py`, `engine.py`.
+- **Not built yet:** `target_mixes.py` (learned mixes, Sprint 3; v1.0 uses hand-set mixes in `Config/model.yaml`),
+  `clock.py` and `sleeve_dispatcher.py` (the engine does both for now; sleeves ON raises "not wired yet").
+- **Settings:** all in [Config/model.yaml](../Config/model.yaml) (features, refits, z-scores, mood mixes, smoothing, band).
+- **Stuck states fixed:** `log_vix` and `credit_spread` go into the HMM as z-scores vs their last 252 days (past only);
+  direction uses `trend_spy` only. Diagnosis in [Docs/output/diagnosis](../Docs/output/diagnosis/stuck_states_progress.md).
+- `regime_store.py` saves a regime run to `trading.duckdb` (`tests/run_regime.py`), so backtests don't redo the 20-min run.
+
+## Files
 
 ### Regime engine: `RegimeHMM/`
 The regime is **two small HMMs**, combined:
 
 | Model | Question it answers | Features it reads (from `features.series`) |
 |---|---|---|
-| **Stress** (2 states) | Calm or stressed? | `log_vix`, `credit_spread`, `credit_spread_chg_20d` (+ `vix_term` in v2, see To do later) |
-| **Direction** (2 states) | Bull or bear? | `trend_spy`, `curve_slope` |
+| **Stress** (2 states) | Calm or stressed? | `log_vix`, `credit_spread` (both as z-scores vs their last year), `credit_spread_chg_20d` (+ `vix_term` later, see To do later) |
+| **Direction** (2 states) | Bull or bear? | `trend_spy` (`curve_slope` dropped: its level stuck the model on "bear" 2008–2015) |
 
 The four moods are the combinations: P(calm-bull) = P(calm) × P(bull), and so on. Treating the two models as independent is a simplification. It keeps each model small and stable, which matters with so few crises to learn from.
 
@@ -78,7 +87,9 @@ The HMM maths is manageable. The hard parts are avoiding look-ahead, keeping sta
 4. **Feature history.** `vix_term` starts in Sept 2009 (CBOE VIX3M history), so the stress model can't see 2008 until a longer VIX3M history is loaded.
 
 ## To do later
-- **Sprint 2: fix "stuck" states on real data.** In a 2005–2012 test run, stressed switched on in Q3 2007 (good) but stayed at 100% until 2011, and bear stayed at 100% through 2012. Likely cause: the model splits "before 2008" vs "after 2008" instead of calm vs stressed, because feature *levels* (e.g. credit spread) sat higher after 2008 even on calm days. Things to try: use changes or levels relative to the last year instead of raw levels; train on a rolling window (e.g. last 10 years) instead of all history; fit one feature at a time to find which one causes it.
+- **Done (Sprint 2): stuck states.** Fixed with z-scores and dropping `curve_slope` (see Status above).
+- **Watch: z-scores are relative.** After a very calm year a small VIX rise can already read "stressed"; turnover rose 2.5× → 4.2×. Tune in Sprint 3.
+- **Learned mood mixes (Sprint 3):** `target_mixes.py`, from how each sleeve's stand-in did in each mood, with caps and a pull toward equal weights.
 - **Add `vix_term` back to the stress model (v2).** It was left out of v1 because it only starts 2009-09-18 and would cut 2008 out of the stress model's history. Steps: export `VIX3M Index` PX_LAST history from Bloomberg, load it into the database, rebuild `vix_term`, then add it to `stress_features` in `Config/model.yaml` (there's a TODO there).
 
 ## Read first

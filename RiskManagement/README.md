@@ -15,7 +15,13 @@ Think of it as the circuit breaker in your house. The appliances (sleeves) do th
 | Regime de-risking | As stress probability rises, capital shifts from sleeves into the reserve. (The allocation itself is set in [ModelHome](../ModelHome/); this layer makes sure it actually happens.) | Days |
 | Permanent tail hedge check | Confirms the reserve's OTM index puts are always in place. | Always on |
 
-## Files that will live here (planned)
+## Status (v1.0, 2026-11-26)
+- **Built:** `circuit_breaker.py`. Fires when VIX is up 20%+ in a day **from 25 or higher**, or closes above 35. It moves
+  the vol sleeve's weight to the reserve, holds 5 trading days, then gives it back evenly over 10. Every cut is a row in
+  `risk_events`. Settings in [Config/risk.yaml](../Config/risk.yaml) (placeholders, not tuned).
+- **Not built yet:** `exposure.py`, `limits.py`, `risk_manager.py`. The engine passes positions straight through for now.
+
+## Files
 | File | What it does | Complexity |
 |---|---|---|
 | `exposure.py` | Adds up delta and vega across all sleeves, using current holdings from [Portfolio](../Portfolio/) plus the new wanted positions. | Medium |

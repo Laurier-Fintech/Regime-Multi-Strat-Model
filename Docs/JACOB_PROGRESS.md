@@ -267,7 +267,7 @@ recorded below.
 
 Prepared: 2026-11-23.
 
-Created a [12-page sleeve implementation briefing](../output/pdf/Jacob_Equity_and_Volatility_Sleeve_Briefing.pdf)
+Created a [12-page sleeve implementation briefing](output/pdf/Jacob_Equity_and_Volatility_Sleeve_Briefing.pdf)
 covering the original foundation and Tasks 1-5, what each change contributes,
 the shared architecture and four-state regime distinction, pricing/Greeks,
 HAR training and data alignment, volatility selection/sizing/hedging, confirmed

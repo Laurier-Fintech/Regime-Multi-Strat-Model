@@ -7,7 +7,16 @@ The key design point is that it **works exactly the same in a backtest and live*
 
 Think of it as the accountant. It doesn't decide what to buy. It knows exactly what's in the account, works out what needs to change, and records every transaction.
 
-## Files that will live here (planned)
+## Status (v1.0, 2026-11-26)
+- **Built:** `broker_interface.py` (Order, Fill, Broker plug), `positions.py` (slices by sleeve + instrument + strategy
+  + group, average cost, splits), `ledger.py` (every cash movement, T-bill interest, dividends), `valuation.py`
+  (NAV per sleeve and total, daily P&L without counting deposits as profit), `rebalancer.py` (wanted − held = orders,
+  skips trades under `min_trade_value`, sells first; stand-in ETFs for sleeves off).
+- **A sleeve's NAV = the value of its holdings.** Cash sits in one shared pool, shown in the `total` row.
+- **Pseudocode only (v2.0):** `snapshots.py` (Jacob's `EquityPortfolioSnapshot`), `lifecycle.py` (expiry, assignment).
+- **Not built:** `greeks.py`.
+
+## Files
 | File | What it does | Complexity |
 |---|---|---|
 | `positions.py` | The current holdings: each stock, ETF, future and option contract, its quantity, cost, and **which sleeve owns it**. | Medium |

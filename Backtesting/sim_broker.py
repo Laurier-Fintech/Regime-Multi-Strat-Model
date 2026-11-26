@@ -1,5 +1,7 @@
 # The simulated broker. Follows the Broker template in Portfolio/broker_interface.py,
 # so the engine can't tell it apart from IBKR. Fills every order right away, with costs.
+import pandas as pd
+
 from Config.settings import load
 from Data.DataBase.access import get_prices
 from Portfolio.broker_interface import Broker, Fill
@@ -8,7 +10,8 @@ from Portfolio.broker_interface import Broker, Fill
 class SimBroker(Broker):
     """Fills orders at today's close, plus spread + slippage, minus commission"""
 
-    def __init__(self):
+    def __init__(self, book=None):
+        self.book = book       # a MarketBook (prices in memory, fast). None = ask the database
         costs = load("backtest.yaml", "costs")
         self.commission_per_share = costs["commission_per_share"]
         self.commission_min = costs["commission_min"]
@@ -23,11 +26,17 @@ class SimBroker(Broker):
 
         # one price lookup for all of today's orders, only today's close (as_of --> no future)
         ids = sorted(set(order.instrument_id for order in orders))
-        closes = get_prices(ids, as_of, as_of, as_of=as_of, field="close")
+        if self.book is not None:
+            # only a close from TODAY counts, an older one means it didn't trade today
+            today = pd.Timestamp(as_of)
+            closes = {i: p for i, (p, d) in self.book.last_prices(ids, as_of).items() if d == today}
+        else:
+            table = get_prices(ids, as_of, as_of, as_of=as_of, field="close")
+            closes = {} if table.empty else table.iloc[0].to_dict()
 
         fills = []
         for order in orders:
-            close = closes[order.instrument_id].iloc[0] if not closes.empty else None
+            close = closes.get(order.instrument_id)
             if close is None or close != close:
                 self.rejected.append(order)
                 continue

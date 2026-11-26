@@ -295,6 +295,7 @@ VALUES
     ('skew',           'series', 'cboe', 'SKEW',  'CBOE SKEW Index',                         'index points', 0, 'sleeve_a', NULL),
     ('ovx',            'series', 'cboe', 'OVX',   'CBOE Crude Oil Volatility Index',         'index points', 0, 'sleeve_a', NULL),
     ('gvz',            'series', 'cboe', 'GVZ',   'CBOE Gold Volatility Index',              'index points', 0, 'sleeve_a', NULL),
+    ('putw_index',     'prices', 'cboe', 'PUT',   'CBOE S&P 500 PutWrite Index',             'index points', 0, 'sleeve_a', 'v1.0 vol-sleeve stand-in in calm moods (selling puts). Daily from 2007'),
 
     -- yfinance: daily bars, known at that day's close -> lag 0
     ('spy',            'prices', 'yfinance', 'SPY',   'SPDR S&P 500 ETF',                     'USD', 0, 'regime,sleeve_b', NULL),
@@ -304,6 +305,7 @@ VALUES
     ('ief',            'prices', 'yfinance', 'IEF',   'iShares 7-10 Year Treasury Bond ETF',  'USD', 0, 'regime', NULL),
     ('hyg',            'prices', 'yfinance', 'HYG',   'iShares iBoxx High Yield Corporate Bond ETF', 'USD', 0, 'regime', NULL),
     ('gld',            'prices', 'yfinance', 'GLD',   'SPDR Gold Shares',                     'USD', 0, 'regime,reserve', NULL),
+    ('vixy',           'prices', 'yfinance', 'VIXY',  'ProShares VIX Short-Term Futures ETF', 'USD', 0, 'sleeve_a', 'v1.0 vol-sleeve stand-in in stressed moods (long vol). From 2011, many reverse splits'),
     ('dbc',            'prices', 'yfinance', 'DBC',   'Invesco DB Commodity Index ETF',       'USD', 0, 'regime', NULL),
     ('uup',            'prices', 'yfinance', 'UUP',   'Invesco DB US Dollar Index Bullish',   'USD', 0, 'regime', NULL),
     ('spx',            'prices', 'yfinance', '^GSPC', 'S&P 500 index',                        'index points', 0, 'sleeve_a,sleeve_b,reserve', NULL),

@@ -13,7 +13,8 @@ LOOKBACK_DAYS = load("configs.yaml", "portfolio")["price_lookback_days"]
 class VixBreaker:
     """A class because it remembers when it last fired (like the allocator remembers yesterday)"""
 
-    def __init__(self):
+    def __init__(self, book=None):
+        self.book = book       # a MarketBook (VIX in memory, fast). None = ask the database
         settings = load("risk.yaml", "vix_breaker")
         self.jump_pct = settings["jump_pct"]
         self.jump_min_level = settings["jump_min_level"]
@@ -26,8 +27,11 @@ class VixBreaker:
 
     def _vix_today(self, as_of):
         """Last 2 known VIX closes --> today's close and the jump from the day before"""
-        start = pd.Timestamp(as_of) - pd.Timedelta(days=LOOKBACK_DAYS)
-        vix = get_series("vix", start, as_of, as_of=as_of)["vix"].dropna()
+        if self.book is not None:
+            vix = self.book.series("vix", as_of)
+        else:
+            start = pd.Timestamp(as_of) - pd.Timedelta(days=LOOKBACK_DAYS)
+            vix = get_series("vix", start, as_of, as_of=as_of)["vix"].dropna()
         if len(vix) < 2:
             return None, None
         return vix.iloc[-1], vix.iloc[-1] / vix.iloc[-2] - 1

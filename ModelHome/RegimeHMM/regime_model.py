@@ -14,6 +14,30 @@ DIRECTION_FEATURES = SETTINGS["direction_features"]
 FIRST_DATE = SETTINGS["first_date"]                    # pull history from here
 REFIT_EVERY_MONTHS = SETTINGS["refit_every_months"]    # how often to refit
 MIN_HISTORY_DAYS = SETTINGS["min_history_days"]        # data needed before the first fit
+ZSCORE_FEATURES = SETTINGS["zscore_features"]          # level features fed as "vs the last year" (fixes stuck states)
+ZSCORE_WINDOW = SETTINGS["zscore_window"]              # trading days in that window
+
+
+def _load(features, start, as_of):
+    """Features known on as_of, from start. Features in ZSCORE_FEATURES become trailing z-scores:
+       (value - average of its last ZSCORE_WINDOW values) / their std, using only past values (no look-ahead)
+
+    Why: raw LEVELS shift after a crisis (credit spreads stayed higher after 2008 even on calm days),
+         so the HMM split "before 2008" vs "after 2008" instead of calm vs stressed
+    """
+    z_features = [f for f in features if f in ZSCORE_FEATURES]
+    if not z_features:
+        return get_features(features, start, as_of, as_of=as_of).dropna()
+
+    # read ~2 years before start, so the first z-scores have a full window behind them
+    early = pd.Timestamp(start) - pd.Timedelta(days=2 * ZSCORE_WINDOW)
+    data = get_features(features, early, as_of, as_of=as_of)
+    for f in z_features:
+        x = data[f].dropna()            # each feature on its own dates (holidays differ between sources)
+        mean = x.rolling(ZSCORE_WINDOW, min_periods=ZSCORE_WINDOW).mean()
+        std = x.rolling(ZSCORE_WINDOW, min_periods=ZSCORE_WINDOW).std()
+        data[f] = ((x - mean) / std).reindex(data.index)
+    return data[data.index >= pd.Timestamp(start)].dropna()
 
 
 class RegimeModel:
@@ -73,7 +97,7 @@ class RegimeModel:
         """Re-learns one model on all data known up to as_of"""
 
         # Pull everything known on as_of --> table, dates down the side, one column per feature
-        data = get_features(slot["features"], FIRST_DATE, as_of, as_of=as_of).dropna()
+        data = _load(slot["features"], FIRST_DATE, as_of)
 
         # Not enough history yet --> no probabilities, try again tomorrow
         if len(data) < MIN_HISTORY_DAYS:
@@ -102,7 +126,7 @@ class RegimeModel:
 
         # Only the rows after the last one we used
         start = slot["last_row"] + pd.Timedelta(days=1)
-        new_rows = get_features(slot["features"], start, as_of, as_of=as_of).dropna()
+        new_rows = _load(slot["features"], start, as_of)
 
         # Usually 1 new row. 0 if nothing new is known today (FRED lag). More if days were skipped
         for date, row in new_rows.iterrows():

@@ -164,6 +164,42 @@ def get_prices(series_ids, start, end=None, *, as_of, field: str = "close",
     return _wide(df, "series_id", field, ids, ffill_limit)
 
 
+VERSION_SOURCES = {
+    "prices": ("clean.prices", "close"),
+    "series": ("clean.series", "value"),
+    "dividends": ("clean.corporate_actions", "dividend"),
+    "splits": ("clean.corporate_actions", "split_ratio"),
+}
+
+
+def get_versions(source: str, series_ids, start, end=None, *, as_of) -> pd.DataFrame:
+    """
+    EVERY version known by as_of (not just the newest), long format:
+      series_id, obs_date, value, known_at
+    For in-memory caches that replay history day by day (Data/DataBase/market_book.py).
+    The caller MUST still keep only known_at <= each day it looks at.
+    source: prices (close) | series (value) | dividends (cash dividend, obs_date = ex_date)
+            | splits (new shares per old share, obs_date = ex_date)
+    """
+    if source not in VERSION_SOURCES:
+        raise ValueError(f"source must be one of {list(VERSION_SOURCES)}")
+    view, col = VERSION_SOURCES[source]
+    ids = _ids(series_ids)
+    _check_ids(ids, "series" if source == "series" else "prices")
+    s, e, a = _window(start, end, as_of)
+    date_col = "ex_date" if source in ("dividends", "splits") else "obs_date"
+    extra = {"dividends": " AND dividend > 0", "splits": " AND split_ratio > 0"}.get(source, "")
+    return _market().execute(
+        f"""
+        SELECT series_id, {date_col} AS obs_date, {col} AS value, known_at
+        FROM {view}
+        WHERE series_id IN (SELECT unnest(?)) AND {date_col} BETWEEN ? AND ? AND known_at <= ?{extra}
+        ORDER BY series_id, obs_date, known_at
+        """,
+        [ids, s, e, a],
+    ).df()
+
+
 def get_features(feature_ids, start, end=None, *, as_of, ffill_limit: int | None = None,
                  include_metadata: bool = False) -> pd.DataFrame:
     """Model inputs, wide by default, preserving the existing API.
@@ -313,7 +349,7 @@ def get_trading_records(table: str, run_id: str | None = None) -> pd.DataFrame:
 
 
 __all__ = [
-    "get_series", "get_prices", "get_features", "get_dividends",
+    "get_series", "get_prices", "get_features", "get_dividends", "get_versions",
     "get_option_iv", "get_option_chain",
     "list_series", "list_features", "get_trading_records", "close",
 ]

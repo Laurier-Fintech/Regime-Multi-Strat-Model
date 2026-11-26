@@ -34,6 +34,16 @@ class Positions:
             self.holdings[key]["quantity"] = new_qty
             self.holdings[key]["avg_cost"] = avg_cost
 
+    def apply_split(self, instrument_id, ratio):
+        """A split: every slice of that instrument gets shares x ratio, avg cost / ratio (value unchanged)
+
+        ratio: new shares per old share, e.g. 2.0 for a 2-for-1, 0.25 for a 1-for-4 reverse split
+        """
+        for (sleeve, iid, strategy_id, group_id), h in self.holdings.items():
+            if iid == instrument_id:
+                h["quantity"] = h["quantity"] * ratio
+                h["avg_cost"] = h["avg_cost"] / ratio
+
     def quantity(self, sleeve, instrument_id, strategy_id, group_id=None):
         """How much of one slice we hold (0 if none)"""
         key = (sleeve, instrument_id, strategy_id, group_id)

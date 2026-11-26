@@ -7,7 +7,30 @@ STANDIN_STRATEGY = load("backtest.yaml", "standin_strategy_id")
 # this works out what to TRADE. Gets the whole book at once
 
 
-def weights_to_wanted(weights, nav, standin_etfs, prices):
+def standin_ids(standin_etfs):
+    """Every ETF / index the stand-ins can hold ("cash" isn't one)"""
+    ids = set()
+    for etfs in standin_etfs.values():
+        for mix in (etfs.values() if "calm" in etfs else [etfs]):
+            ids |= {etf for etf in mix if etf != "cash"}
+    return sorted(ids)
+
+
+def _mix(etfs, p_stressed):
+    """One sleeve's stand-in mix today. A {calm: ..., stressed: ...} sleeve is blended by P(stressed)
+
+    e.g. vol at P(stressed) = 0.3 --> 70% putw_index + 30% vixy
+    """
+    if "calm" not in etfs:
+        return etfs
+    mix = {}
+    for mood, weight in [("calm", 1 - p_stressed), ("stressed", p_stressed)]:
+        for etf, share in etfs[mood].items():
+            mix[etf] = mix.get(etf, 0.0) + weight * share
+    return mix
+
+
+def weights_to_wanted(weights, nav, standin_etfs, prices, p_stressed=0.0):
     """Sleeves OFF only: sleeve weight --> whole shares of its stand-in ETFs
 
     e.g. equity 35% of $1M, stand-in qqq at $500 --> 700 shares
@@ -16,13 +39,14 @@ def weights_to_wanted(weights, nav, standin_etfs, prices):
     weights -- the allocator's weight per sleeve
     nav -- total NAV today
     standin_etfs -- from backtest.yaml, e.g. {"equity": {"qqq": 1.0}, "reserve": {"cash": 0.5, "gld": 0.5}}
-    prices -- today's price per instrument_id
+    prices -- today's price per instrument_id (an ETF with no price yet, e.g. vixy before 2011, stays cash)
+    p_stressed -- P(stressed) today, for sleeves whose stand-in switches with the mood
     Return: list of wanted rows (sleeve, instrument_id, strategy_id, group_id, target_quantity)
     """
     wanted = []
     for sleeve, etfs in standin_etfs.items():
-        for etf, share in etfs.items():
-            if etf == "cash":       # cash isn't bought, it just stays in the ledger
+        for etf, share in _mix(etfs, p_stressed).items():
+            if etf == "cash" or etf not in prices:       # cash isn't bought, it just stays in the ledger
                 continue
             dollars = weights[sleeve] * nav * share
             shares = int(dollars / prices[etf])      # int() rounds toward 0, works for shorts too

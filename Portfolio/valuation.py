@@ -9,13 +9,24 @@ from Config.settings import load
 LOOKBACK_DAYS = load("configs.yaml", "portfolio")["price_lookback_days"]
 
 
-def price_holdings(instrument_ids, as_of):
+def price_holdings(instrument_ids, as_of, book=None):
     """Today's close for each instrument, or the last known one if there's none today
 
+    Keyword arguments:
+    book -- a MarketBook (prices in memory, fast). None = ask the database
     Return: prices (Series by instrument_id), stale (list of ids priced from an older day)
     """
     if len(instrument_ids) == 0:
         return pd.Series(dtype=float), []
+
+    if book is not None:
+        known = book.last_prices(instrument_ids, as_of)
+        missing = [i for i in instrument_ids if i not in known]
+        if missing:
+            raise ValueError(f"No price for {missing} in the {LOOKBACK_DAYS} days up to {as_of}.")
+        prices = pd.Series({i: known[i][0] for i in instrument_ids})
+        stale = [i for i in instrument_ids if known[i][1] < pd.Timestamp(as_of)]
+        return prices, stale
 
     start = pd.Timestamp(as_of) - pd.Timedelta(days=LOOKBACK_DAYS)
     table = get_prices(list(instrument_ids), start, as_of, as_of=as_of, field="close")
