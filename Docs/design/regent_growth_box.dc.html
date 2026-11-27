@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Growth · Curtain + milestones · 3D box</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;600&amp;family=Cormorant+SC:wght@500;600&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div onPointerDown="{{onDown}}" onPointerMove="{{onMove}}" onPointerUp="{{onUp}}" onPointerLeave="{{onUp}}" style="position:relative;width:760px;height:600px;box-sizing:border-box;border:1px solid #1F5866;background:#060C10;color:#D6E8EC;font-family:'Azeret Mono',monospace;font-size:12px;overflow:hidden;cursor:grab;touch-action:none;user-select:none">
+<div style="position:absolute;left:16px;right:16px;top:12px;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid rgba(201,161,90,.35);padding-bottom:6px">
+<span style="font-family:'Cormorant SC',serif;font-size:22px;font-weight:600;letter-spacing:3px;color:#C9A15A;line-height:1">{{title}}</span>
+<sc-if value="{{paused}}" hint-placeholder-val="{{ false }}"><button aria-label="Resume rotation" onClick="{{resume}}" style="font:inherit;font-size:11px;letter-spacing:1px;color:#5EE6FF;background:transparent;border:1px solid #1F5866;padding:5px 10px;min-height:28px;cursor:pointer">↻ ROTATE</button></sc-if>
+</div>
+<svg viewBox="0 0 760 600" style="position: absolute; inset: 0; width: 761px; height: 600px; cursor: grab; touch-action: none; left: -1px" role="img" aria-label="{{aria}} Drag to rotate.">
+<sc-for list="{{bg}}" as="g" hint-placeholder-count="3"><polygon points="{{g.p}}" fill="{{g.f}}" stroke="{{g.s}}" stroke-width="1"></polygon></sc-for>
+<sc-for list="{{polys}}" as="g" hint-placeholder-count="8"><polygon points="{{g.p}}" fill="{{g.f}}" stroke="{{g.s}}" stroke-width="1"></polygon></sc-for>
+<sc-for list="{{lines}}" as="l" hint-placeholder-count="20"><polyline points="{{l.p}}" fill="none" stroke="{{l.c}}" stroke-width="{{l.w}}" opacity="{{l.o}}" stroke-dasharray="{{l.d}}"></polyline></sc-for>
+<sc-if value="{{hasNow}}" hint-placeholder-val="{{ true }}">
+<circle cx="{{nowX}}" cy="{{nowY}}" r="{{pulse}}" fill="none" stroke="#C9A15A" opacity="{{pulseO}}"></circle>
+<circle cx="{{nowX}}" cy="{{nowY}}" r="5" fill="#C9A15A"></circle>
+</sc-if>
+</svg>
+<div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none"><sc-for list="{{tags}}" as="k" hint-placeholder-count="12"><span style="position:absolute;left:{{k.x}}px;top:{{k.y}}px;transform:{{k.tr}};color:{{k.c}};font-size:{{k.s}}px;letter-spacing:1px;white-space:nowrap;line-height:1">{{k.t}}</span></sc-for></div>
+<div style="position:absolute;left:24px;top:50px;display:flex;flex-direction:column;gap:3px">
+<span style="font-size:10px;letter-spacing:2px;color:#7F9EA8">{{bigL}}</span>
+<span style="font-size:28px;font-weight:600;letter-spacing:1px;line-height:1;color:{{bigC}}">{{big}}</span>
+<span style="color:#7F9EA8">{{bigS}}</span>
+</div>
+<div style="position:absolute;right:24px;top:56px;display:flex;gap:22px;text-align:right">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:2px;color:#7F9EA8">{{s.l}}</span><span style="font-size:18px;color:{{s.c}}">{{s.v}}</span></div></sc-for>
+</div>
+<div style="position:absolute;right:16px;bottom:14px;display:flex;gap:4px"><sc-for list="{{views}}" as="b" hint-placeholder-count="4"><button aria-label="Snap view" onClick="{{b.go}}" style="font:inherit;font-size:10px;letter-spacing:1px;color:#7F9EA8;background:rgba(6,12,16,.8);border:1px solid #1F5866;padding:5px 9px;min-height:28px;cursor:pointer">{{b.n}}</button></sc-for></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":760,"height":600}}'>
+class Component extends DCLogic {
+componentDidMount(){ this.t0=Date.now(); this.last=this.t0; this.rot=-0.45; this.ph=0.3; this.drag=null; this.auto=true; this.iv=setInterval(()=>{const n=Date.now();const dt=(n-this.last)/1000;this.last=n;if(this.snap&&!this.drag){const k=Math.min(1,dt*5);this.rot+=(this.snap.rot-this.rot)*k;this.ph+=(this.snap.ph-this.ph)*k;if(Math.abs(this.snap.rot-this.rot)<0.002&&Math.abs(this.snap.ph-this.ph)<0.002)this.snap=null;}else if(this.auto&&!this.drag)this.rot+=0.3*dt;this.setState({t:(n-this.t0)/1000});},50); }
+componentWillUnmount(){ clearInterval(this.iv); }
+renderVals() {
+const D={"eq": [1.005, 1.0222, 1.0, 0.9924, 1.0042, 1.0082, 1.0035, 0.9665, 0.9728, 0.8883, 0.9264, 0.961, 0.9836, 0.9853, 0.9857, 0.9847, 1.0311, 1.0118, 1.0559, 1.0617, 1.091, 1.0841, 1.1389, 1.1748, 1.1307, 1.1598, 1.2094, 1.2246, 1.1645, 1.1142, 1.1779, 1.1491, 1.2314, 1.279, 1.2857, 1.3354, 1.3556, 1.3821, 1.3657, 1.3949, 1.3862, 1.3692, 1.3726, 1.329, 1.2582, 1.308, 1.2978, 1.228, 1.2585, 1.2661, 1.3023, 1.2924, 1.2223, 1.2347, 1.2417, 1.2765, 1.2941, 1.2677, 1.264, 1.2677, 1.2987, 1.2983, 1.325, 1.3324, 1.3532, 1.3358, 1.3866, 1.38, 1.4073, 1.4512, 1.4773, 1.502, 1.4715, 1.5295, 1.5162, 1.5173, 1.5457, 1.573, 1.57, 1.6151, 1.6157, 1.6095, 1.6049, 1.6339, 1.7063, 1.6457, 1.6139, 1.594, 1.5961, 1.5828, 1.5237, 1.565, 1.5474, 1.5546, 1.5207, 1.5286, 1.5723, 1.6439, 1.6209, 1.644, 1.6264, 1.6206, 1.6612, 1.6645, 1.6822, 1.677, 1.7056, 1.7174, 1.7656, 1.806, 1.8227, 1.8462, 1.8768, 1.8637, 1.9037, 1.916, 1.9241, 1.9619, 1.9893, 1.9979, 2.0848, 2.0345, 1.9885, 2.0113, 2.0649, 2.0352, 1.9719, 2.0228, 2.0293, 1.9015, 1.9039, 1.9722, 2.0019, 1.992, 1.9825, 2.0101, 1.9071, 1.9305, 1.951, 1.9674, 1.9726, 2.0217, 2.0616, 2.113, 2.1166, 2.0294, 1.9888, 2.0858, 2.125, 2.2305, 2.3045, 2.3285, 2.2718, 2.2277, 2.3294, 2.3904, 2.3993, 2.379, 2.431, 2.5001, 2.5077, 2.5629, 2.5981, 2.6623, 2.588, 2.7037, 2.6975, 2.7485, 2.5606, 2.6169, 2.6895, 2.6293, 2.5832, 2.5701, 2.5483, 2.5078, 2.4742, 2.4474, 2.5295, 2.5312, 2.6284, 2.6164, 2.6686, 2.6745, 2.7365, 2.811, 2.8866, 2.8539, 2.7893, 2.7963, 2.9291, 2.9905, 3.0365, 3.135, 3.1953, 3.157, 3.2514, 3.3478, 3.354, 3.3509, 3.4116, 3.4247, 3.5497, 3.5739, 3.6531, 3.6018, 3.4757, 3.644, 3.66, 3.7542, 3.816, 3.8691, 3.9942, 4.0346, 4.047, 4.0728, 4.1458, 4.116, 3.9253, 4.1853, 4.386, 4.3671, 4.3073, 4.4304, 4.5267, 4.4061, 4.5324], "mood": {"cbl": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.999, 0.996, 0.006, 0.034, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.006, 0.979, 0.996, 0.999, 0.999, 0.998, 0.999, 1.0, 0.999, 1.0, 1.0, 0.999, 0.999, 1.0, 1.0, 1.0, 1.0, 1.0, 0.997, 0.999, 1.0, 0.999, 0.999, 0.998, 0.999, 0.999, 0.999, 0.998, 1.0, 0.999, 1.0, 1.0, 0.999, 0.999, 0.999, 0.999, 0.999, 0.999, 0.999, 0.997, 0.998, 0.638, 0.997, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.999, 1.0, 1.0, 1.0, 0.997, 0.989, 1.0, 1.0, 1.0, 1.0, 1.0, 0.999, 1.0, 0.058, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "sbl": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.991, 0.963, 0.992, 0.039, 0.012, 0.024, 0.499, 0.993, 0.999, 0.998, 0.998, 0.993, 0.02, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.002, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.003, 0.001, 0.361, 0.003, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.002, 0.011, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.941, 1.0, 1.0, 1.0, 0.999, 0.998, 0.998], "sbr": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.003, 0.002, 0.008, 0.961, 0.988, 0.976, 0.501, 0.007, 0.001, 0.002, 0.001, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.002, 0.002], "cbr": [0, 0, 0, 0, 0, 0, 0, 0, 0.001, 0.003, 0.0, 0.001, 0.0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.001, 0.003, 0.001, 0.001, 0.002, 0.001, 0, 0.0, 0, 0, 0.001, 0.001, 0, 0, 0, 0, 0, 0.001, 0.001, 0, 0.001, 0.001, 0.002, 0.001, 0.001, 0.001, 0.002, 0, 0.001, 0, 0, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.0, 0.001, 0.001, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0.001, 0.0, 0, 0, 0, 0, 0, 0.001, 0, 0.001, 0, 0, 0, 0.0, 0.0, 0.0]}, "alloc": {"reserve": [0.321, 0.15, 0.116, 0.116, 0.116, 0.116, 0.116, 0.116, 0.116, 0.116, 0.389, 0.593, 0.661, 0.824, 0.874, 0.875, 0.832, 0.744, 0.718, 0.718, 0.718, 0.714, 0.475, 0.224, 0.141, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.46, 0.357, 0.186, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.46, 0.391, 0.22, 0.157, 0.165, 0.122, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.233, 0.547, 0.65, 0.684, 0.684, 0.684, 0.79], "vol": [0.137, 0.308, 0.342, 0.342, 0.342, 0.342, 0.342, 0.342, 0.342, 0.342, 0.229, 0.144, 0.116, 0.0, 0.0, 0.011, 0.044, 0.085, 0.094, 0.094, 0.094, 0.095, 0.194, 0.299, 0.333, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.0, 0.103, 0.274, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.0, 0.069, 0.24, 0.326, 0.323, 0.341, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.295, 0.164, 0.121, 0.107, 0.107, 0.107, 0.0], "equity": [0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.274, 0.225, 0.209, 0.171, 0.124, 0.113, 0.124, 0.17, 0.188, 0.188, 0.188, 0.19, 0.254, 0.318, 0.339, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.336, 0.334, 0.345, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.317, 0.238, 0.213, 0.204, 0.204, 0.204, 0.204], "spread": [0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.109, 0.037, 0.014, 0.004, 0.001, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.077, 0.159, 0.187, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.181, 0.178, 0.193, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.156, 0.051, 0.017, 0.005, 0.005, 0.005, 0.005]}, "spy": [0.9478, 0.9233, 0.9151, 0.9587, 0.9732, 0.8919, 0.8838, 0.8975, 0.813, 0.6787, 0.6314, 0.6376, 0.5853, 0.5224, 0.5659, 0.6221, 0.6585, 0.6581, 0.7072, 0.7333, 0.7593, 0.7447, 0.7906, 0.8057, 0.7764, 0.8006, 0.8493, 0.8625, 0.794, 0.7529, 0.8043, 0.7681, 0.8369, 0.8689, 0.8689, 0.927, 0.9486, 0.9815, 0.9816, 1.0101, 0.9987, 0.9819, 0.9622, 0.9093, 0.8462, 0.9386, 0.9348, 0.9445, 0.9883, 1.0312, 1.0644, 1.0573, 0.9938, 1.0341, 1.0464, 1.0726, 1.0998, 1.0797, 1.0859, 1.0956, 1.1516, 1.1663, 1.2106, 1.2339, 1.263, 1.2462, 1.3106, 1.2712, 1.3115, 1.3722, 1.4129, 1.4495, 1.3984, 1.4621, 1.4742, 1.4844, 1.5189, 1.5503, 1.5294, 1.5898, 1.5678, 1.6048, 1.6489, 1.6447, 1.5959, 1.6856, 1.6592, 1.6755, 1.697, 1.6626, 1.7001, 1.5965, 1.5557, 1.6881, 1.6943, 1.665, 1.5821, 1.5808, 1.6871, 1.6938, 1.7226, 1.7286, 1.7916, 1.7937, 1.7938, 1.7627, 1.8277, 1.8647, 1.8981, 1.9727, 1.9751, 1.9948, 2.0229, 2.0358, 2.0776, 2.0837, 2.1257, 2.1758, 2.2423, 2.2695, 2.3974, 2.3102, 2.2469, 2.2585, 2.3134, 2.3267, 2.4129, 2.4899, 2.5047, 2.3316, 2.3749, 2.1658, 2.3392, 2.415, 2.4587, 2.5592, 2.396, 2.5627, 2.6014, 2.5579, 2.6077, 2.6653, 2.7618, 2.842, 2.8409, 2.616, 2.2893, 2.58, 2.703, 2.7509, 2.9129, 3.1162, 2.9995, 2.9247, 3.2429, 3.363, 3.3287, 3.4213, 3.5766, 3.7659, 3.7906, 3.8756, 3.9702, 4.0884, 3.8978, 4.1713, 4.1378, 4.3292, 4.1008, 3.9798, 4.1294, 3.767, 3.7755, 3.4641, 3.7832, 3.6288, 3.2933, 3.561, 3.759, 3.5423, 3.7651, 3.6704, 3.8065, 3.8673, 3.8852, 4.1369, 4.2724, 4.2029, 4.0036, 3.9167, 4.2744, 4.4696, 4.5407, 4.7777, 4.934, 4.735, 4.9745, 5.15, 5.2124, 5.3342, 5.4462, 5.3976, 5.7195, 5.5819, 5.7318, 5.659, 5.3437, 5.2974, 5.6303, 5.9196, 6.0559, 6.1802, 6.4004, 6.5529, 6.5657, 6.5709, 6.6678, 6.6102, 6.2837, 6.9439, 7.3093, 7.2341, 7.2366, 7.4305, 7.406, 7.3389, 7.3787], "st": [1.0, 1.0, 1.0, 1.0, 0.99, 0.81, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.92, 0.0, 0.46, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.69, 1.0, 1.0, 1.0, 1.0, 1.0, 0.73, 0.0, 0.0, 0.0, 0.27, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.12, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.38, 0.01, 0.86, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.98, 0.47, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.02, 0.06, 0.4, 0.0, 0.0, 0.22, 1.0, 1.0, 1.0, 1.0, 0.98, 0.17, 0.01, 0.57, 0.01, 0.55, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 1.0, 1.0, 1.0, 1.0, 0.94, 0.61, 0.0, 0.0, 0.0, 0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.13, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.38, 0.0, 0.0, 0.52, 0.44, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.56, 1.0, 1.0, 0.34, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.02, 0.04, 0.0, 0.0, 0.0, 0.0, 0.1, 1.0, 1.0], "yr": {"reserve": [0.017, 0.063, 0.031, -0.017, 0.044, -0.025, -0.014, -0.039, 0.108, 0.013, 0.013, 0.059, 0.154, -0.011, -0.022, 0.05, 0.072, 0.2, -0.149], "vol": [-0.001, 0.04, 0.066, -0.057, -0.049, 0.054, 0.076, -0.123, 0.032, 0.065, -0.059, -0.041, -0.042, 0.144, -0.111, 0.039, 0.149, -0.022, 0.134], "equity": [-0.057, 0.086, 0.08, 0.01, 0.047, 0.151, 0.084, 0.029, 0.027, 0.178, 0.032, 0.104, 0.164, 0.223, -0.198, 0.28, 0.259, 0.176, 0.229], "spread": [-0.004, 0.033, 0.007, -0.032, -0.002, 0.055, -0.015, -0.001, 0.03, 0.02, 0.015, 0.005, -0.022, 0.07, 0.009, 0.045, 0.098, 0.006, 0.083]}};
+const EQ=D.eq, SPY=D.spy, ST=D.st, AL=D.alloc, YR=D.yr;
+const t=(this.state && this.state.t) || 0;
+const scene=this.props.scene ?? 'growth';
+const CY='#5EE6FF', GR='#1F5866', DK='#12313A', BR='#C9A15A', DIM='#7F9EA8', AM='#FFAE42', TX='#D6E8EC';
+const MC={cbl:'#5EE6FF',cbr:'#2F8FB0',sbl:'#C9A15A',sbr:'#FFAE42'};
+const SC={reserve:'#5EE6FF',vol:'#2FA7C0',equity:'#1B6E80',spread:'#C9A15A'};
+function hexA(h,a){const n=parseInt(h.slice(1),16);return 'rgba('+(n>>16)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
+// camera: gentle sway, plus one slow full turn every 30s
+let th0=-0.35, sway=0.18, ph=0.3, F=560, Dz=3.6, cx=380, cy=262, spin=true;
+const cam=()=>{const c=t%30;let s=0;if(spin&&c<7){const u=c/7;s=2*Math.PI*(u*u*(3-2*u));}return th0+sway*Math.sin(t*0.25)+s;};
+let th;
+function P(x,y,z){const x1=x*Math.cos(th)+z*Math.sin(th), z1=-x*Math.sin(th)+z*Math.cos(th);const y2=y*Math.cos(ph)+z1*Math.sin(ph), z2=-y*Math.sin(ph)+z1*Math.cos(ph);const s=F/(z2+Dz);return [cx+x1*s, cy-y2*s, z2];}
+const pt=a=>a[0].toFixed(1)+','+a[1].toFixed(1);
+const lines=[], polys=[], tags=[], bg=[];
+let FOG=false;
+const fogf=pts=>{if(!FOG)return 1;const z=pts.reduce((a,q)=>a+q[2],0)/pts.length;return Math.max(0.25,Math.min(1,1.05-0.32*z));};
+const L=(pts,c,w,o,d)=>lines.push({p:pts.map(pt).join(' '),c,w:w||1,o:((o==null?1:o)*fogf(pts)).toFixed(2),d:d||'none'});
+const Q=(pts,f,s)=>polys.push({p:pts.map(pt).join(' '),f,s:s||'none',z:pts.reduce((a,q)=>a+q[2],0)/pts.length});
+const tag=(p,tx,c,a,s,dy)=>tags.push({x:p[0].toFixed(1),y:(p[1]+(dy||0)).toFixed(1),t:tx,c:c||DIM,a:a||'middle',s:s||10});
+function floor(x0,x1,z0,z1,y,nx,nz,o){for(let k=0;k<=nx;k++){const x=x0+(x1-x0)*k/nx;L([P(x,y,z0),P(x,y,z1)],GR,1,o||.6);}for(let k=0;k<=nz;k++){const z=z0+(z1-z0)*k/nz;L([P(x0,y,z),P(x1,y,z)],GR,1,o||.6);}}
+function box(x,z,w,d,y0,y1,c,a){const v=[[x-w,y0,z-d],[x+w,y0,z-d],[x+w,y0,z+d],[x-w,y0,z+d],[x-w,y1,z-d],[x+w,y1,z-d],[x+w,y1,z+d],[x-w,y1,z+d]].map(q=>P(...q));
+ const faces=[[0,1,5,4,.55],[1,2,6,5,.4],[2,3,7,6,.4],[3,0,4,7,.4],[4,5,6,7,.85]];
+ faces.forEach(f=>Q([v[f[0]],v[f[1]],v[f[2]],v[f[3]]],hexA(c,(a||.5)*f[4]),hexA(c,.9)));}
+const dd=a=>{let m=-1e9;return a.map(v=>{m=Math.max(m,v);return v/m-1;});};
+let now=null, out={};
+const N=EQ.length, DDe=dd(EQ), DDs=dd(SPY);
+const stat={title:'Portfolio',bigL:'NET ASSET VALUE',big:'$4,532,425',bigC:TX,bigS:'4.53× since 2008 · SPY 7.38×',stats:[{l:'WORST DROP',v:'−15.8%',c:AM},{l:'SPY WORST',v:'−51.9%',c:DIM},{l:'SHARPE',v:'0.72',c:TX}]};
+const v='both_room';
+let X=i=>-1.6+3.2*i/(N-1), Y=x=>-0.4+1.1*(x-0.5)/(7.4-0.5), B=-0.4, KD=2.2;
+function bands(z,y0,y1,a){for(let i=0;i<N;i++){if(ST[i]>0.5)Q([P(X(i)-0.008,y0,z),P(X(i)+0.008,y0,z),P(X(i)+0.008,y1,z),P(X(i)-0.008,y1,z)],hexA(AM,a||.1));}}
+function endTags(zs,ze){tag(P(1.62,Y(SPY[N-1]),zs),'SPY 7.38×',DIM,'start',10,4);tag(P(1.62,Y(EQ[N-1]),ze),'REGENT 4.53×',CY,'start',10,4);tag(P(-1.6,B,ze),'2008',DIM,'middle',9,16);tag(P(1.6,B,ze),'2026',DIM,'middle',9,16);}
+function under(z,col,a){const u=DDe.map((d,i)=>P(X(i),B+d*KD,z));Q(u.concat([P(X(N-1),B,z),P(X(0),B,z)]),hexA(col||AM,a||.35));L(u,col||AM,1,.9);return u;}
+if(v==='g1'){ // glass slab from slightly above
+ th0=-0.3; sway=0.14; ph=0.28; cy=240; th=cam(); const z0=-0.15,z1=0.15;
+ bands(0.75,B,0.75,.09);
+ L(SPY.map((x,i)=>P(X(i),Y(x),0.55)),DIM,1.2,.8,'4 3');
+ for(let i=0;i<N-1;i++)Q([P(X(i),Y(EQ[i]),z0),P(X(i+1),Y(EQ[i+1]),z0),P(X(i+1),Y(EQ[i+1]),z1),P(X(i),Y(EQ[i]),z1)],hexA(CY,.28));
+ const fr=EQ.map((x,i)=>P(X(i),Y(x),z0)); Q(fr.concat([P(X(N-1),B,z0),P(X(0),B,z0)]),hexA(CY,.10));
+ L(EQ.map((x,i)=>P(X(i),Y(x),z1)),CY,1,.6); L(fr,CY,2,1);
+ under(z0); L([P(-1.6,B,z0),P(1.6,B,z0)],GR,1,1); endTags(0.55,z0); now=fr[N-1];
+ out=Object.assign({sub:'GLASS SLAB · SPY BEHIND · DRAWDOWN BELOW'},stat);
+}
+if(v==='g2'){ // wire echoes
+ th0=-0.4; sway=0.16; ph=0.22; cy=245; th=cam();
+ bands(0.9,B,0.75,.07);
+ for(let k=6;k>=1;k--){const z=k*0.12;L(EQ.map((x,i)=>P(X(i),Y(x),z)),CY,1,0.5-k*0.07);}
+ for(let k=0;k<4;k++){const z=0.55+k*0.1;L(SPY.map((x,i)=>P(X(i),Y(x),z)),DIM,1,0.5-k*0.1);}
+ const fr=EQ.map((x,i)=>P(X(i),Y(x),0)); L(fr,CY,2.2,1);
+ for(let i=0;i<N;i+=6)L([P(X(i),Y(EQ[i]),0),P(X(i),Y(EQ[i]),0.72)],CY,1,.18);
+ under(0,AM,.3); L([P(-1.6,B,0),P(1.6,B,0)],GR,1,1); endTags(0.55,0); now=fr[N-1];
+ out=Object.assign({sub:'WIRE ECHOES · SPY BEHIND · DRAWDOWN BELOW'},stat);
+}
+if(v==='g3'){ // curtain, straight on
+ th0=-0.2; sway=0.1; ph=0.06; cy=235; spin=false; th=cam();
+ bands(0.5,B-0.45,0.75,.08);
+ L(SPY.map((x,i)=>P(X(i),Y(x),0.35)),DIM,1.2,.8,'4 3');
+ for(let i=0;i<N;i+=2)L([P(X(i),B,0),P(X(i),Y(EQ[i]),0)],CY,1.4,0.25+0.6*i/N);
+ for(let i=0;i<N;i+=2)if(DDe[i]<-0.005)L([P(X(i),B,0),P(X(i),B+DDe[i]*KD,0)],AM,1.4,.85);
+ const fr=EQ.map((x,i)=>P(X(i),Y(x),0)); L(fr,CY,2,1); L([P(-1.6,B,0),P(1.6,B,0)],TX,1,.5);
+ endTags(0.35,0); now=fr[N-1];
+ out=Object.assign({sub:'CURTAIN · ONE BAR PER MONTH · SPY BEHIND · DRAWDOWN BELOW'},stat);
+}
+if(v==='g4'){ // twin walls from above
+ th0=-0.45; sway=0.15; ph=0.36; cy=240; th=cam();
+ for(let i=0;i<N;i++){if(ST[i]>0.5)Q([P(X(i)-0.008,B,-0.4),P(X(i)+0.008,B,-0.4),P(X(i)+0.008,B,0.8),P(X(i)-0.008,B,0.8)],hexA(AM,.22));}
+ floor(-1.6,1.6,-0.4,0.8,B,8,3,.35);
+ const sp=SPY.map((x,i)=>P(X(i),Y(x),0.5)); Q(sp.concat([P(X(N-1),B,0.5),P(X(0),B,0.5)]),hexA('#7F9EA8',.14)); L(sp,DIM,1.2,.9);
+ const fr=EQ.map((x,i)=>P(X(i),Y(x),0)); Q(fr.concat([P(X(N-1),B,0),P(X(0),B,0)]),hexA(CY,.22)); L(fr,CY,2.2,1);
+ under(0); endTags(0.5,0); now=fr[N-1];
+ out=Object.assign({sub:'TWIN WALLS · STRESS ON THE FLOOR · DRAWDOWN BELOW'},stat);
+}
+if(v==='g5'){ // hologram on a projector base
+ th0=-0.3; sway=0.2; ph=0.3; cy=215; F=480; spin=false; th=cam();
+ const BY=-0.95;
+ for(const r of [1.85,1.6,1.2]){const ring=[];for(let d=0;d<=72;d++){const a=d*Math.PI/36;ring.push(P(r*Math.cos(a),BY,0.55*r*Math.sin(a)));}L(ring,r===1.85?CY:GR,1,r===1.85?.6:.8,r===1.6?'2 5':'none');}
+ for(let i=0;i<N;i+=12)L([P(X(i),BY,0),P(X(i),Y(EQ[i]),0)],CY,1,.15);
+ bands(0.4,B,0.75,.07);
+ L(SPY.map((x,i)=>P(X(i),Y(x),0.35)),DIM,1.1,.75,'4 3');
+ const fr=EQ.map((x,i)=>P(X(i),Y(x),0)); Q(fr.concat([P(X(N-1),B,0),P(X(0),B,0)]),hexA(CY,.12)); L(fr,CY,2,1);
+ under(0,AM,.3); L([P(-1.6,B,0),P(1.6,B,0)],CY,1,.4); endTags(0.35,0); now=fr[N-1];
+ out=Object.assign({sub:'PROJECTED ON A BASE · SPY BEHIND · DRAWDOWN BELOW'},stat);
+}
+if(v==='g6'){ // milestones
+ th0=-0.3; sway=0.12; ph=0.2; cy=238; th=cam();
+ bands(0.6,B,0.8,.08);
+ L(SPY.map((x,i)=>P(X(i),Y(x),0.4)),DIM,1.2,.8,'4 3');
+ for(const lv of [1,2,3,4]){const y=Y(lv);L([P(-1.6,y,0.6),P(1.6,y,0.6)],DK,1,1);tag(P(-1.64,y,0.6),'$'+lv+'M',DIM,'end',9,3);
+  const i=EQ.findIndex(x=>x>=lv);if(i>0){L([P(X(i),B,0),P(X(i),y,0),P(X(i),y,0.6)],BR,1,.7,'2 3');tag(P(X(i),y,0),String(2008+Math.floor(i/12)),BR,'middle',9,-8);}}
+ const fr=EQ.map((x,i)=>P(X(i),Y(x),0)); Q(fr.concat([P(X(N-1),B,0),P(X(0),B,0)]),hexA(CY,.14)); L(fr,CY,2.2,1);
+ under(0); L([P(-1.6,B,0),P(1.6,B,0)],GR,1,1); endTags(0.4,0); now=fr[N-1];
+ out=Object.assign({sub:'MILESTONES · WHEN WE CROSSED EACH $1M · SPY BEHIND'},stat);
+}
+
+if(['m_floor','m_room','c_floor','c_room','both','both_room'].includes(v)){
+ FOG=true; ph=(this.ph==null?0.3:this.ph); cy=268; F=560; Dz=3.9; th=(this.rot==null?-0.45:this.rot);
+ const mile=v.startsWith('m')||v.startsWith('both'), curt=v.startsWith('c')||v.startsWith('both'), room=v.endsWith('room');
+ const FY=-0.78, x0=-1.75,x1=1.75,z0=-0.5,z1=0.5;
+ const farZ=P(0,0,z1)[2]>P(0,0,z0)[2]?z1:z0, nearZ=farZ===z1?z0:z1, wz=farZ*0.98;
+ // depth cue 1: floor grid
+ if(room)bg.push({p:[P(x0,FY,z0),P(x1,FY,z0),P(x1,FY,z1),P(x0,FY,z1)].map(pt).join(' '),f:'rgba(8,26,32,.7)',s:'rgba(31,88,102,.9)'});
+ for(let k=0;k<=14;k++){const x=x0+(x1-x0)*k/14;L([P(x,FY,z0),P(x,FY,z1)],GR,1,.7);}
+ for(let k=0;k<=4;k++){const z=z0+(z1-z0)*k/4;L([P(x0,FY,z),P(x1,FY,z)],GR,1,.7);}
+ if(room){ // depth cue 2: chart box with grids on the two far walls
+  const TY=0.85;
+  const farX=P(x1,0,0)[2]>P(x0,0,0)[2]?x1:x0, nearX=farX===x1?x0:x1;
+  bg.push({p:[P(x0,FY,farZ),P(x1,FY,farZ),P(x1,TY,farZ),P(x0,TY,farZ)].map(pt).join(' '),f:'rgba(14,42,52,.55)',s:'rgba(31,88,102,.9)'});
+  bg.push({p:[P(farX,FY,z0),P(farX,FY,z1),P(farX,TY,z1),P(farX,TY,z0)].map(pt).join(' '),f:'rgba(10,32,40,.6)',s:'rgba(31,88,102,.9)'});
+  L([P(x0,TY,farZ),P(x1,TY,farZ)],GR,1,.7); L([P(farX,TY,z0),P(farX,TY,z1)],GR,1,.7);
+  L([P(farX,FY,farZ),P(farX,TY,farZ)],GR,1,.8); L([P(nearX,FY,farZ),P(nearX,TY,farZ)],GR,1,.6); L([P(farX,FY,nearZ),P(farX,TY,nearZ)],GR,1,.6);
+  for(let k=1;k<6;k++){const y=FY+(TY-FY)*k/6;L([P(x0,y,farZ),P(x1,y,farZ)],DK,1,1);L([P(farX,y,z0),P(farX,y,z1)],DK,1,1);}
+  for(let k=1;k<14;k++){const x=x0+(x1-x0)*k/14;L([P(x,FY,farZ),P(x,TY,farZ)],DK,1,.8);}
+  for(let k=1;k<4;k++){const z=z0+(z1-z0)*k/4;L([P(farX,FY,z),P(farX,TY,z)],DK,1,.8);}
+ }
+ // depth cue 3: shadow of the line on the floor + drop lines
+ L(EQ.map((x,i)=>P(X(i),FY,0)),CY,2,.22);
+ for(let i=0;i<N;i+=12)L([P(X(i),FY,0),P(X(i),Y(EQ[i]),0)],CY,1,.14);
+ // stressed periods painted on the floor
+ {let i=0;while(i<N){if(ST[i]>0.5){let j=i;while(j+1<N&&ST[j+1]>0.5)j++;const a=X(i)-0.008,b=X(j)+0.008,za=z0,zb=z1;
+  bg.push({p:[P(a,FY,za),P(b,FY,za),P(b,FY,zb),P(a,FY,zb)].map(pt).join(' '),f:'rgba(255,174,66,.30)',s:'none'});
+  L([P(a,FY,za),P(a,FY,zb)],AM,1.5,.95);L([P(b,FY,za),P(b,FY,zb)],AM,1.5,.95);i=j+1;}else i++;}}
+ {const sp=SPY.map((x,i)=>P(X(i),Y(x),wz));bg.push({p:sp.concat([P(X(N-1),FY,wz),P(X(0),FY,wz)]).map(pt).join(' '),f:'rgba(157,180,188,.10)',s:'none'});L(sp,'#B8CCD3',1.8,.95);
+  const lp=P(X(30),Y(SPY[30])+0.12,wz);tags.push({x:lp[0].toFixed(1),y:lp[1].toFixed(1),t:'S&P 500',c:'#C8D8DE',a:'middle',s:15});}
+ if(curt){for(let i=0;i<N;i+=2)L([P(X(i),B,0),P(X(i),Y(EQ[i]),0)],CY,1.3,0.22+0.55*i/N);
+  for(let i=0;i<N;i+=2)if(DDe[i]<-0.005)L([P(X(i),B,0),P(X(i),B+DDe[i]*KD,0)],AM,1.3,.85);}
+ else{const fr=EQ.map((x,i)=>P(X(i),Y(x),0));Q(fr.concat([P(X(N-1),B,0),P(X(0),B,0)]),hexA(CY,.13));under(0);}
+ if(mile){for(const lv of [2,3,4]){const y=Y(lv);const i=EQ.findIndex(x=>x>=lv);
+  if(i>0){L([P(X(i),y,0),P(X(i),y,wz)],BR,1,.8,'2 3');tag(P(X(i),y,0),String(2008+Math.floor(i/12)),BR,'middle',9,-8);}}}
+ const fr=EQ.map((x,i)=>P(X(i),Y(x),0)); L(fr,CY,2.2,1); L([P(-1.6,B,0),P(1.6,B,0)],TX,1,.35);
+ tag(P(1.66,Y(SPY[N-1]),wz),'S&P 500 7.38×',DIM,'start',10,4);
+ // quiet axes: years along the front of the floor, $ levels up the back wall
+ for(let yr=2008;yr<=2026;yr+=3){const i=Math.min((yr-2008)*12,N-1);tags.push({x:P(X(i),FY,nearZ)[0].toFixed(1),y:(P(X(i),FY,nearZ)[1]+14).toFixed(1),t:String(yr),c:'#7F9EA8',a:'middle',s:12});}
+ for(const lv of [1,2,3,4,5,6,7]){const y=Y(lv);L([P(x0,y,wz),P(x1,y,wz)],DK,1,.9);const q=P(x0,y,wz);tags.push({x:(q[0]-6).toFixed(1),y:(q[1]+3).toFixed(1),t:'$'+lv+'M',c:'#7F9EA8',a:'end',s:12});} tag(P(1.66,Y(EQ[N-1]),0),'REGENT',CY,'start',10,4);
+ polys.sort((p,q)=>q.z-p.z);
+ now=fr[N-1];
+ out=Object.assign({sub:''},stat);
+}
+const ph2=(t%2.4)/2.4;
+const self=this;
+const onDown=e=>{if(e.target&&e.target.closest&&e.target.closest('button'))return;if(e.preventDefault)e.preventDefault();self.drag={x:e.clientX,y:e.clientY};self.auto=false;self.snap=null;if(e.currentTarget&&e.currentTarget.setPointerCapture)try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}};
+const onMove=e=>{if(!self.drag)return;self.rot+=(e.clientX-self.drag.x)*0.01;self.ph=Math.max(0.05,Math.min(0.5,self.ph+(e.clientY-self.drag.y)*0.005));self.drag={x:e.clientX,y:e.clientY};};
+const onUp=()=>{self.drag=null;};
+const resume=()=>{self.auto=true;self.snap=null;self.setState({a:Date.now()});};
+const near=(a)=>{const r=self.rot==null?-0.45:self.rot;return a+2*Math.PI*Math.round((r-a)/(2*Math.PI));};
+const snapTo=(rot,ph)=>()=>{self.auto=false;self.snap={rot:near(rot),ph};self.setState({a:Date.now()});};
+const views=[{n:'FRONT',go:snapTo(0,0.06)},{n:'ANGLE',go:snapTo(-0.45,0.3)},{n:'SIDE',go:snapTo(-1.15,0.22)},{n:'TOP',go:snapTo(0,1.15)}];
+const tags2=tags.map(k=>Object.assign({},k,{tr:k.a==='middle'?'translate(-50%,-100%)':(k.a==='end'?'translate(-100%,-100%)':'translate(0,-100%)')}));
+return Object.assign({views,resume,paused:this.auto===false,onDown,onMove,onUp,bg,lines,polys,tags:tags2,hasNow:!!now,nowX:now?now[0].toFixed(1):0,nowY:now?now[1].toFixed(1):0,pulse:(6+14*ph2).toFixed(1),pulseO:(1-ph2).toFixed(2),aria:out.title+': '+out.sub.toLowerCase()},out);
+}
+}
+</script>
+</body>
+</html>

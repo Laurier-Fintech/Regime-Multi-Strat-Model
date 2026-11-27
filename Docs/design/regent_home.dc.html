@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home · Regent</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;600&amp;family=Cormorant+SC:wght@500;600&amp;display=swap">
+<style>
+body{margin:0;background:#04070A}
+</style>
+</helmet>
+<div style="width:1440px;height:900px;box-sizing:border-box;padding:12px;background:#04070A;color:#D6E8EC;font-family:'Azeret Mono',monospace;font-size:12px;display:flex;flex-direction:column;gap:10px">
+
+<header style="height:72px;flex:none;box-sizing:border-box;border:1px solid #12313A;background:#060C10;display:flex;flex-direction:column">
+<div style="height:30px;display:flex;align-items:center;gap:20px;padding:0 16px;border-bottom:1px solid #12313A;font-size:11px;color:#7F9EA8">
+<label style="display:flex;align-items:center;gap:6px">RUN<select aria-label="Run" style="font:inherit;color:#D6E8EC;background:#04070A;border:1px solid #1F5866;padding:2px 4px"><option>backtest_20261126_110829 · v1.0</option><option>backtest_20261126_094804</option></select></label>
+<span>MODE <b style="color:#5EE6FF;font-weight:400">BACKTEST</b></span>
+<span>BROKER <b style="color:#3DDC97;font-weight:400">● SIM · CONNECTED</b></span>
+<span>DATA TO <b style="color:#D6E8EC;font-weight:400">2026-11-11</b></span>
+<span>SLEEVES <b style="color:#FFAE42;font-weight:400">OFF · STAND-IN ETFS</b></span>
+<span style="margin-left:auto">CHECKS <b style="color:#D6E8EC;font-weight:400">12/12</b> · LAST RUN 11-26 11:08</span>
+</div>
+<div style="flex:1;display:flex;align-items:center;gap:22px;padding:0 16px">
+<span style="font-family:'Cormorant SC',serif;font-size:24px;font-weight:600;letter-spacing:5px;color:#EDE3CF;line-height:1">Regent</span>
+<nav style="display:flex;gap:2px"><a href="#" style="padding:6px 9px;font-size:11px;background:#5EE6FF;color:#04070A;text-decoration:none">HOME</a><a href="#" style="padding:6px 9px;font-size:11px;color:#7F9EA8;text-decoration:none;border:1px solid #12313A">REGIME</a><a href="#" style="padding:6px 9px;font-size:11px;color:#7F9EA8;text-decoration:none;border:1px solid #12313A">ALLOCATION</a><a href="#" style="padding:6px 9px;font-size:11px;color:#7F9EA8;text-decoration:none;border:1px solid #12313A">SLEEVES</a><a href="#" style="padding:6px 9px;font-size:11px;color:#7F9EA8;text-decoration:none;border:1px solid #12313A">RISK</a><a href="#" style="padding:6px 9px;font-size:11px;color:#7F9EA8;text-decoration:none;border:1px solid #12313A">PERFORMANCE</a><a href="#" style="padding:6px 9px;font-size:11px;color:#7F9EA8;text-decoration:none;border:1px solid #12313A">BOOK</a><a href="#" style="padding:6px 9px;font-size:11px;color:#7F9EA8;text-decoration:none;border:1px solid #12313A">SYSTEM</a></nav>
+<span style="margin-left:auto;color:#7F9EA8">NAV <b style="color:#D6E8EC;font-size:16px;font-weight:600">$4,532,425</b></span>
+</div>
+</header>
+
+<div style="display:flex;gap:10px;flex:none;height:600px">
+
+<aside style="width:310px;flex:none;display:flex;flex-direction:column;gap:10px">
+<section style="border:1px solid #12313A;background:#060C10;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;overflow:hidden;height:295px;flex:none">
+<div style="font-family:'Cormorant SC',serif;color:#C9A15A;letter-spacing:3px;font-size:18px;font-weight:600;line-height:1.1;padding-bottom:5px;border-bottom:1px solid rgba(201,161,90,.35)">Market Mood</div>
+<div style="position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center">
+<svg viewBox="0 0 200 200" style="height:100%;max-height:180px;width:auto" role="img" aria-label="Mood ring: stressed bull 99.9 percent.">
+<circle cx="100" cy="100" r="80" fill="none" stroke="#0C1E24" stroke-width="18"></circle>
+<sc-for list="{{moodSegs}}" as="o" hint-placeholder-count="4"><circle cx="100" cy="100" r="80" fill="none" stroke="{{o.c}}" stroke-width="18" stroke-dasharray="{{o.da}}" stroke-dashoffset="{{o.dof}}" transform="rotate(-90 100 100)"></circle></sc-for>
+</svg>
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none">
+<span style="font-size:18px;font-weight:600;letter-spacing:2px;color:#C9A15A;text-align:center;line-height:1.15">STRESSED<br>BULL</span>
+<span style="font-size:15px">99.9%</span>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 10px;font-size:11px">
+<span style="display:flex;justify-content:space-between;color:#7F9EA8"><span><span style="color:#C9A15A">■</span> stressed bull</span><b style="color:#D6E8EC;font-weight:400">99.9%</b></span>
+<span style="display:flex;justify-content:space-between;color:#7F9EA8"><span><span style="color:#FFAE42">■</span> stressed bear</span><b style="color:#D6E8EC;font-weight:400">0.1%</b></span>
+<span style="display:flex;justify-content:space-between;color:#7F9EA8"><span><span style="color:#5EE6FF">■</span> calm bull</span><b style="color:#D6E8EC;font-weight:400">0%</b></span>
+<span style="display:flex;justify-content:space-between;color:#7F9EA8"><span><span style="color:#2F8FB0">■</span> calm bear</span><b style="color:#D6E8EC;font-weight:400">0%</b></span>
+</div>
+</section>
+<section style="border:1px solid #12313A;background:#060C10;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;overflow:hidden;flex:1">
+<div style="font-family:'Cormorant SC',serif;color:#C9A15A;letter-spacing:3px;font-size:18px;font-weight:600;line-height:1.1;padding-bottom:5px;border-bottom:1px solid rgba(201,161,90,.35);display:flex;justify-content:space-between;align-items:baseline"><span>Trades</span><span style="font-family:'Azeret Mono',monospace;font-size:10px;letter-spacing:1px;color:#7F9EA8;font-weight:400">13,212 SINCE 2008</span></div>
+<div style="display:grid;grid-template-columns:44px 58px 38px minmax(0,1fr) 62px;gap:5px 6px;font-size:11px">
+<span style="color:#7F9EA8">DATE</span><span style="color:#7F9EA8">SLEEVE</span><span style="color:#7F9EA8">SIDE</span><span style="color:#7F9EA8">QTY · SYM</span><span style="color:#7F9EA8;text-align:right">PRICE</span>
+<sc-for list="{{trades}}" as="r" hint-placeholder-count="8">
+<span style="color:#7F9EA8">{{r.d}}</span><span>{{r.s}}</span><span style="color:{{r.c}}">{{r.side}}</span><span>{{r.q}}</span><span style="text-align:right">{{r.p}}</span>
+</sc-for>
+</div>
+</section>
+</aside>
+
+<div style="width:760px;height:600px;flex:none">
+<dc-import name="Main" hint-size="760px,600px"></dc-import>
+</div>
+
+<aside style="width:310px;flex:none;display:flex;flex-direction:column;gap:10px">
+<section style="border:1px solid #12313A;background:#060C10;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;overflow:hidden;height:300px;flex:none">
+<div style="font-family:'Cormorant SC',serif;color:#C9A15A;letter-spacing:3px;font-size:18px;font-weight:600;line-height:1.1;padding-bottom:5px;border-bottom:1px solid rgba(201,161,90,.35)">Capital Now</div>
+<div style="position:relative;flex:1;min-height:0">
+<svg viewBox="0 0 300 160" preserveAspectRatio="none" style="width:100%;height:100%;display:block" role="img" aria-label="100 percent chart of capital per sleeve since January 2025, reserve now 79 percent.">
+<sc-for list="{{capLayers}}" as="a" hint-placeholder-count="4"><polygon points="{{a.p}}" fill="{{a.c}}"></polygon></sc-for>
+</svg>
+<span style="position:absolute;right:2px;top:2px;font-size:10px;color:#04070A;background:rgba(214,232,236,.85);padding:1px 4px">NOW · 79% RESERVE</span>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:10px;color:#7F9EA8"><span>JAN 2025</span><span>NOV 2026</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 10px;font-size:11px">
+<span style="display:flex;justify-content:space-between;color:#7F9EA8"><span><span style="color:#5EE6FF">■</span> reserve</span><b style="color:#D6E8EC;font-weight:400">79%</b></span>
+<span style="display:flex;justify-content:space-between;color:#7F9EA8"><span><span style="color:#1B6E80">■</span> equity</span><b style="color:#D6E8EC;font-weight:400">20%</b></span>
+<span style="display:flex;justify-content:space-between;color:#7F9EA8"><span><span style="color:#C9A15A">■</span> spread</span><b style="color:#D6E8EC;font-weight:400">0.5%</b></span>
+<span style="display:flex;justify-content:space-between;color:#7F9EA8"><span><span style="color:#2FA7C0">■</span> vol</span><b style="color:#D6E8EC;font-weight:400">0%</b></span>
+</div>
+</section>
+<section style="border:1px solid #12313A;background:#060C10;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;overflow:hidden;flex:1">
+<div style="font-family:'Cormorant SC',serif;color:#C9A15A;letter-spacing:3px;font-size:18px;font-weight:600;line-height:1.1;padding-bottom:5px;border-bottom:1px solid rgba(201,161,90,.35)">Sleeve P&amp;L</div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 80px 90px;gap:6px 8px;font-size:12px">
+<span style="color:#7F9EA8;font-size:10px">SLEEVE</span><span style="color:#7F9EA8;font-size:10px;text-align:right">TODAY</span><span style="color:#7F9EA8;font-size:10px;text-align:right">NOV MTD</span>
+<sc-for list="{{pl}}" as="r" hint-placeholder-count="5">
+<span style="color:{{r.nc}}">{{r.n}}</span><span style="text-align:right;color:{{r.c1}}">{{r.d}}</span><span style="text-align:right;color:{{r.c2}}">{{r.m}}</span>
+</sc-for>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:10px;color:#7F9EA8;border-top:1px solid #12313A;padding-top:6px"><span>CUMULATIVE P&amp;L BY SLEEVE</span><span>2008 TO 2026</span></div>
+<div style="position:relative;flex:1;min-height:0">
+<svg viewBox="0 0 280 100" preserveAspectRatio="none" style="width:100%;height:100%;display:block" role="img" aria-label="Cumulative profit by sleeve since 2008: equity +1.90 million, reserve +0.55, spread +0.40, vol +0.30.">
+<line x1="0" y1="{{zeroY}}" x2="280" y2="{{zeroY}}" stroke="#1F5866" stroke-dasharray="3 3"></line>
+<sc-for list="{{plLines}}" as="l" hint-placeholder-count="4"><polyline points="{{l.p}}" fill="none" stroke="{{l.c}}" stroke-width="1.8" vector-effect="non-scaling-stroke"></polyline></sc-for>
+</svg>
+<div style="position:absolute;left:0;top:0;font-size:9px;color:#7F9EA8">+$2M</div>
+<div style="position:absolute;left:0;bottom:0;font-size:9px;color:#7F9EA8">−$0.2M</div>
+</div>
+<div style="display:flex;gap:10px;font-size:10px;color:#7F9EA8"><span><span style="color:#1B6E80">━</span> equity</span><span><span style="color:#5EE6FF">━</span> reserve</span><span><span style="color:#C9A15A">━</span> spread</span><span><span style="color:#2FA7C0">━</span> vol</span></div>
+</section>
+</aside>
+</div>
+
+<div style="display:flex;gap:10px;flex:1;min-height:0">
+<section style="border:1px solid #12313A;background:#060C10;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;overflow:hidden;flex:1.5">
+<div style="font-family:'Cormorant SC',serif;color:#C9A15A;letter-spacing:3px;font-size:18px;font-weight:600;line-height:1.1;padding-bottom:5px;border-bottom:1px solid rgba(201,161,90,.35)">Events</div>
+<div style="display:flex;align-items:center;gap:10px;border:1px solid rgba(255,92,77,.5);background:rgba(255,92,77,.07);padding:5px 8px;font-size:11px">
+<span style="width:8px;height:8px;border-radius:50%;background:#FF5C4D"></span><span style="color:#FF8F84;letter-spacing:1px">VIX BREAKER · CUT</span><span style="color:#7F9EA8">vol sleeve's 10.7% parked in reserve · last trigger 11-09, VIX 19.9 after a 22% jump</span>
+</div>
+<div style="display:grid;grid-template-columns:44px 62px minmax(0,1fr);gap:4px 8px;font-size:11px">
+<sc-for list="{{events}}" as="e" hint-placeholder-count="3"><span style="color:#7F9EA8">{{e.d}}</span><span style="color:{{e.c}}">{{e.k}}</span><span>{{e.m}}</span></sc-for>
+</div>
+</section>
+<section style="border:1px solid #12313A;background:#060C10;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;overflow:hidden;flex:1.5;gap:6px">
+<div style="font-family:'Cormorant SC',serif;color:#C9A15A;letter-spacing:3px;font-size:18px;font-weight:600;line-height:1.1;padding-bottom:5px;border-bottom:1px solid rgba(201,161,90,.35)">System Health</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 12px;font-size:11px">
+<sc-for list="{{health}}" as="h" hint-placeholder-count="6"><span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:{{h.c}}"></span><span style="color:#7F9EA8">{{h.n}}</span><b style="margin-left:auto;font-weight:400">{{h.v}}</b></span></sc-for>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:10px;color:#7F9EA8;border-top:1px solid #12313A;padding-top:5px"><span>SYSTEM CHECKS · 12/12 PASS</span><span>tests/system_check.py</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px 12px;font-size:10px">
+<sc-for list="{{checks}}" as="k" hint-placeholder-count="12"><span style="display:flex;align-items:center;gap:5px"><span style="color:#3DDC97">OK</span><span style="color:#D6E8EC">{{k}}</span></span></sc-for>
+</div>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const C='#5EE6FF',A='#FFAE42',G='#3DDC97',D='#7F9EA8',T='#D6E8EC';
+const c=2*Math.PI*80;let off=0;
+const moodSegs=[[0.9985,'#C9A15A'],[0.0015,'#FFAE42'],[0,'#5EE6FF'],[0,'#2F8FB0']].map(([v,col])=>{const len=Math.max(0,v*c-(v>0.004?2:0));const o={da:len.toFixed(1)+' '+c.toFixed(1),dof:(-off).toFixed(1),c:col};off+=v*c;return o;});
+const S=[[0.321, 0.15, 0.116, 0.116, 0.116, 0.116, 0.116, 0.116, 0.116, 0.116, 0.389, 0.593, 0.661, 0.824, 0.874, 0.875, 0.832, 0.744, 0.718, 0.718, 0.718, 0.714, 0.475, 0.224, 0.141, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.46, 0.357, 0.186, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.46, 0.391, 0.22, 0.157, 0.165, 0.122, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.117, 0.233, 0.547, 0.65, 0.684, 0.684, 0.684, 0.79], [0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.338, 0.274, 0.225, 0.209, 0.171, 0.124, 0.113, 0.124, 0.17, 0.188, 0.188, 0.188, 0.19, 0.254, 0.318, 0.339, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.336, 0.334, 0.345, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.346, 0.317, 0.238, 0.213, 0.204, 0.204, 0.204, 0.204], [0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.204, 0.109, 0.037, 0.014, 0.004, 0.001, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.077, 0.159, 0.187, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.195, 0.181, 0.178, 0.193, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.194, 0.156, 0.051, 0.017, 0.005, 0.005, 0.005, 0.005], [0.137, 0.308, 0.342, 0.342, 0.342, 0.342, 0.342, 0.342, 0.342, 0.342, 0.229, 0.144, 0.116, 0.0, 0.0, 0.011, 0.044, 0.085, 0.094, 0.094, 0.094, 0.095, 0.194, 0.299, 0.333, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.0, 0.103, 0.274, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.0, 0.069, 0.24, 0.326, 0.323, 0.341, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.343, 0.295, 0.164, 0.121, 0.107, 0.107, 0.107, 0.0]], COL=['#5EE6FF','#1B6E80','#C9A15A','#2FA7C0'];
+const n=S[0].length;let base=new Array(n).fill(0);const X=i=>(i*300/(n-1)).toFixed(1);
+const capLayers=S.map((L,j)=>{const top=base.map((b,i)=>b+L[i]);const up=top.map((v,i)=>X(i)+','+(160-v*160).toFixed(1));const lo=base.map((v,i)=>X(i)+','+(160-v*160).toFixed(1)).reverse();base=top;return {p:up.concat(lo).join(' '),c:COL[j]};});
+const tr=(d,s,q,sym,p)=>({d,s,side:q>0?'BUY':'SELL',c:q>0?C:A,q:Math.abs(q)+' '+sym.toUpperCase(),p:'$'+p.toFixed(2)});
+const trades=[tr('11-11','reserve',57,'gld',365.28),tr('11-11','equity',-31,'qqq',690.17),tr('11-10','reserve',74,'gld',369.47),tr('11-10','equity',-7,'qqq',674.56),tr('11-09','reserve',-19,'gld',379.42),tr('11-09','equity',-28,'qqq',679.15),tr('11-06','reserve',36,'gld',372.63),tr('11-06','equity',-20,'qqq',655.90),tr('11-05','reserve',696,'gld',375.60),tr('11-05','equity',120,'qqq',647.24)];
+const f=v=>v===0?'0':(v>0?'+':'−')+'$'+Math.abs(v).toLocaleString('en-US');
+const row=(nm,d,m,bold)=>({n:nm,d:f(d),m:f(m),nc:bold?T:D,c1:d>0?C:(d<0?A:D),c2:m>0?C:(m<0?A:D)});
+const pl=[row('equity',21392,4050),row('reserve',-20320,32997),row('spread',142,150),row('vol',0,-53184),row('total',1507,126302,true)];
+const events=[{d:'11-05',k:'REBAL',c:C,m:'bought 696 GLD: reserve up to 68% as vol was cut'},{d:'09-29',k:'MOOD',c:'#C9A15A',m:'calm bull to stressed bull'},{d:'04-02',k:'MOOD',c:'#5EE6FF',m:'stressed bull to calm bull (one-day blip)'}];
+const health=[{n:'checks',v:'12/12',c:G},{n:'data to',v:'2026-11-11',c:G},{n:'backtest',v:'4m 53s',c:G},{n:'regime run',v:'105554',c:G},{n:'sleeves',v:'OFF',c:A},{n:'broker',v:'SIM',c:G}];
+const CUM={"equity": [0, -0.057, 0.029, 0.109, 0.119, 0.166, 0.317, 0.401, 0.43, 0.457, 0.635, 0.667, 0.771, 0.935, 1.158, 0.96, 1.24, 1.499, 1.675, 1.904], "reserve": [0, 0.017, 0.08, 0.111, 0.094, 0.138, 0.113, 0.099, 0.06, 0.168, 0.181, 0.194, 0.253, 0.407, 0.396, 0.374, 0.424, 0.496, 0.696, 0.547], "spread": [0, -0.004, 0.029, 0.036, 0.004, 0.002, 0.057, 0.042, 0.041, 0.071, 0.091, 0.106, 0.111, 0.089, 0.159, 0.168, 0.213, 0.311, 0.317, 0.4], "vol": [0, -0.001, 0.039, 0.105, 0.048, -0.001, 0.053, 0.129, 0.006, 0.038, 0.103, 0.044, 0.003, -0.039, 0.105, -0.006, 0.033, 0.182, 0.16, 0.294]}, PC={equity:'#1B6E80',reserve:'#5EE6FF',spread:'#C9A15A',vol:'#2FA7C0'};
+const lo=-0.2, hi=2.0, Y=v=>(100-(v-lo)/(hi-lo)*100).toFixed(1);
+const plLines=Object.keys(CUM).map(k=>({c:PC[k],p:CUM[k].map((v,i)=>(i*280/(CUM[k].length-1)).toFixed(1)+','+Y(v)).join(' ')}));
+const zeroY=Y(0);
+const checks=['config','database','regime_hmm','allocator','positions','ledger_and_valuation','rebalancer_and_broker','vix_breaker','engine','regime_zscores','splits','market_book'];
+return {moodSegs,capLayers,trades,pl,events,health,plLines,zeroY,checks};
+}
+}
+</script>
+</body>
+</html>

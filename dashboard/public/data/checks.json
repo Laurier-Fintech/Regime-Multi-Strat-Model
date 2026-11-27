@@ -1,0 +1,65 @@
+{
+ "ran_at": "2026-11-27 13:26",
+ "checks": [
+  {
+   "name": "config",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "database",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "regime_hmm",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "allocator",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "positions",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "ledger_and_valuation",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "rebalancer_and_broker",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "vix_breaker",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "regime_zscores",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "splits",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "market_book",
+   "ok": true,
+   "error": ""
+  },
+  {
+   "name": "engine",
+   "ok": true,
+   "error": ""
+  }
+ ]
+}
